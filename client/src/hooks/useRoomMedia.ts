@@ -16,7 +16,7 @@ export function useRoomMedia(roomId: string | null, ownUserId: number | undefine
   const pendingCandidates = useRef(new Map<number, RTCIceCandidateInit[]>());
   const lastSignalId = useRef(0);
   const media = trpc.match.media.useQuery({ roomId: roomId ?? "nessuna-sala" }, { enabled: Boolean(roomId), refetchInterval: roomId ? 1800 : false });
-  const signals = trpc.match.signals.useQuery({ roomId: roomId ?? "nessuna-sala", afterId: lastSignalId.current }, { enabled: Boolean(roomId && ownUserId), refetchInterval: roomId ? 1000 : false });
+  const signals = trpc.match.signals.useQuery({ roomId: roomId ?? "nessuna-sala", afterId: lastSignalId.current }, { enabled: Boolean(roomId && ownUserId), refetchInterval: roomId ? 400 : false });
   const setMedia = trpc.match.setMedia.useMutation();
   const sendSignal = trpc.match.signal.useMutation();
 

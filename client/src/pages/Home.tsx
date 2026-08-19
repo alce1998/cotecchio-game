@@ -127,7 +127,7 @@ export default function Home() {
   const seenClosedInHand = useRef("");
 
   const reportError = (error: { message: string }) => toast.error(error.message || "Il tavolo non ha risposto. Riprova.");
-  const onlineSnapshot = trpc.match.snapshot.useQuery({ roomId: onlineRoomId ?? "nessuna-sala" }, { enabled: Boolean(onlineRoomId), refetchInterval: onlineRoomId ? 1500 : false, refetchOnWindowFocus: true });
+  const onlineSnapshot = trpc.match.snapshot.useQuery({ roomId: onlineRoomId ?? "nessuna-sala" }, { enabled: Boolean(onlineRoomId), refetchInterval: onlineRoomId ? 350 : false, refetchOnWindowFocus: true });
   const joinOnline = trpc.match.join.useMutation({ onSuccess: (data) => { setOnlineRoomId(data.room.id); setSetupOpen(false); }, onError: reportError });
   const createPrivate = trpc.match.createPrivate.useMutation({ onSuccess: (data) => { setOnlineRoomId(data.room.id); setSetupOpen(false); }, onError: reportError });
   const joinPrivate = trpc.match.joinPrivate.useMutation({ onSuccess: (data) => { setOnlineRoomId(data.room.id); setSetupOpen(false); }, onError: reportError });
