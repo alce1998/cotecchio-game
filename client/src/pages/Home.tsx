@@ -19,12 +19,12 @@ import "./cardInteraction.css";
 import "./chatDock.css";
 import "./tableThemes.css";
 
-const FRONT_SHEET = "/manus-storage/modellicartepiacentinefronte_8902d9b5.jpg";
-const BACK_CARD = "/manus-storage/retrocartepiacentine_1553b154.jpg";
-const TABLE_IMAGE = "/manus-storage/cotecchio-tavolo-osteria_898b79d0.png";
-const FELT_IMAGE = "/manus-storage/cotecchio-panno-verde_b2bbd65c.png";
-const TOKEN_IMAGE = "/manus-storage/cotecchio-gettone-presa_7310e580.png";
-const LOGO_IMAGE = "/manus-storage/cotecchio-nuovo-emblema_2e1026f9.jpg";
+const FRONT_SHEET = "/cards/fronte.jpg";
+const BACK_CARD = "/cards/retro.jpg";
+const TABLE_IMAGE = "/cards/tavolo.png";
+const FELT_IMAGE = "/cards/panno.png";
+const TOKEN_IMAGE = "/cards/gettone.png";
+const LOGO_IMAGE = "/cards/logo.jpg";
 const TABLE_THEMES = [
   { id: "taverna", name: "Taverna", note: "Il circolo di sempre", image: TABLE_IMAGE },
   { id: "cibali", name: "Cibali", note: "Legno scuro e panno verde", image: TABLE_IMAGE },
