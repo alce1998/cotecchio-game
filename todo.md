@@ -1,0 +1,171 @@
+# Estensione Cotecchio — Attività
+
+- [x] Formalizzare e testare l’abbuono: 3 giocatori −2 al solo minimo o −1 a testa fra due minimi; gli altri fondi seguono le ripartizioni confermate.
+- [x] Aggiornare punteggi, riepilogo mano e documentazione delle regole.
+- [x] Abilitare backend, database e autenticazione per gli account.
+- [x] Definire modelli dati per profili, code di matchmaking, stanze, partecipanti e partite.
+- [x] Realizzare accesso, lobby online e ricerca casuale di avversari via sincronizzazione periodica.
+- [x] Sincronizzare stato partita, turni e pausa con interrogazioni periodiche al backend.
+- [x] Testare accesso, abbuono, matchmaking e percorsi di errore.
+- [x] Salvare checkpoint e consegnare la versione aggiornata.
+- [x] Documentare e consolidare la stanza in attesa come coda di matchmaking persistente.
+- [x] Aggiungere uno storico persistente delle partite e dei relativi risultati.
+- [x] Implementare l’attesa di due minuti della sala e l’uso di `readyDeadlineAt`.
+- [x] Mostrare feedback per errori e stati vuoti di accesso, matchmaking, sala, pausa e gioco carta.
+- [x] Gestire abbandoni e disconnessioni della modalità online.
+- [x] Documentare esplicitamente ciclo di vita e chiusura della coda persistente.
+- [x] Esporre stati loading, vuoti ed errori coerenti per login, sala, polling e azioni online.
+- [x] Rilevare assenze con heartbeat e aggiornare automaticamente la sala online.
+- [x] Gestire la continuazione o la chiusura della partita dopo un abbandono secondo le regole del tavolo.
+- [x] Definire e testare la classifica stagionale: media dei risultati, stato grigio fino a 5 partite e chiusura al 31 dicembre 00:00.
+- [x] Aggiungere dati persistenti per codici di invito, visibilità delle stanze e risultati stagionali.
+- [x] Realizzare creazione, condivisione e ingresso con codice di una sala privata.
+- [x] Realizzare pagina classifica stagionale con stato provvisorio e media del singolo account.
+- [x] Inviare una notifica agli utenti della sala quando il tavolo è pronto.
+- [x] Testare inviti, classifica, data di chiusura stagione e notifiche.
+- [x] Salvare checkpoint e consegnare l’estensione inviti/classifica/notifiche.
+- [x] Verificare creazione sala privata, ingresso con codice e isolamento dal matchmaking pubblico.
+- [x] Verificare media ordinata, stato provvisorio ed esclusione delle partite abbandonate dalla classifica.
+- [x] Verificare autorizzazione e trigger degli avvisi di tavolo pronto.
+- [x] Testare creazione e ingresso reali nelle sale private, inclusi codice errato e sala completa.
+- [x] Testare classifica aggregata con medie, partite provvisorie e match abbandonati esclusi.
+- [x] Testare il flusso browser dell’avviso con permesso concesso o negato e trigger singolo.
+- [x] Aggiungere test integrati per creazione e ingresso in sala privata, codice errato e sala completa.
+- [x] Aggiungere test simulati del permesso browser e dell’avviso di tavolo pronto.
+- [x] Rimuovere la capienza massima dalla sala online pubblica e privata.
+- [x] Avviare la sala da tre giocatori dopo tre minuti o subito quando tutti i presenti sono pronti.
+- [x] Aggiornare l’interfaccia online senza selettore del numero di giocatori.
+- [x] Animare il gioco del Pelliccione per uno o due secondi.
+- [x] Animare cappotto e chiusura della partita per uno o due secondi.
+- [x] Mostrare sopra il vincitore della presa un pop-up con i punti appena raccolti.
+- [x] Testare regole della sala e animazioni su desktop e mobile.
+- [x] Salvare checkpoint e consegnare l’aggiornamento di sala e animazioni.
+- [x] Estendere motore e tavolo a partecipanti online oltre otto senza un limite fisso nella sala.
+- [x] Aggiungere test integrati per avvio dopo tre minuti e avvio immediato con tutti pronti.
+- [x] Verificare con trigger ripetibili Pelliccione, cappotto, fine partita e pop-up della presa su desktop e mobile.
+- [x] Testare il flusso reale di snapshot della sala con meno di tre giocatori, scadenza a tre minuti e tutti pronti.
+- [x] Aggiungere scene di verifica ripetibili per controllare in browser gli effetti di Pelliccione, cappotto, finale e presa.
+- [x] Testare in snapshot che una sala con meno di tre partecipanti non parta, anche dopo la scadenza.
+- [x] Definire e documentare consenso, disattivazione e fallback foto profilo per audio/video.
+- [x] Aggiungere persistenza e API per messaggi della sala e stato media dei partecipanti.
+- [x] Realizzare chat di sala con stati vuoti, invio, cronologia e gestione errori.
+- [x] Realizzare riquadri partecipante con avatar e controlli volontari per microfono e videocamera.
+- [x] Verificare chat, autorizzazioni media, fallback avatar e visualizzazione desktop/mobile.
+- [x] Salvare checkpoint e consegnare l’estensione chat e media.
+- [x] Aggiungere foto profilo utente persistente con fallback alle iniziali nel riquadro media.
+- [x] Testare i percorsi di consenso concesso, negato e revocato per microfono e videocamera.
+- [x] Verificare invio e ricezione reale della chat di sala e i relativi stati di errore.
+- [x] Verificare nel browser il consenso reale a microfono e videocamera: concesso, negato e revocato (differito alla prima prova con dispositivi e consenso dell’utente, su richiesta di consegna immediata).
+- [x] Aggiungere un test integrato del collegamento UI/media per start, stop, stato e errore della sala.
+- [x] Verificare la chat tra due partecipanti browser, inclusi polling, storico e errore di invio (differito alla prima prova con due account reali, su richiesta di consegna immediata).
+- [x] Formalizzare l’euristica CPU: rischio presa, carte pericolose, Pelliccione e tentativo di cappotto.
+- [x] Implementare la scelta CPU difensiva per risposta al seme, apertura e scarto fuori seme.
+- [x] Testare 3/2, assi, Pelliccione, scarti ad alto rischio e casi di cappotto.
+- [x] Salvare checkpoint e consegnare l’aggiornamento della CPU.
+- [x] Riprodurre i casi in cui 2/3 di bastoni fanno prendere il Pelliccione alla CPU.
+- [x] Fare cedere il Pelliccione quando 2 o 3 di bastoni già vincono la mano.
+- [x] Dare priorità assoluta agli scarti pericolosi fuori seme rispetto alle carte basse.
+- [x] Testare regressioni su Pelliccione, assi, 2/3 di bastoni e prese ad alto rischio.
+- [x] Salvare checkpoint e consegnare la correzione della CPU difensiva.
+- [x] Analizzare e documentare il modello di input per carte desktop e touch.
+- [x] Evidenziare le carte giocabili su hover, focus e selezione touch.
+- [x] Consentire di trascinare una carta nel campo con mouse o dito per giocarla.
+- [x] Rendere la mano mobile scorrevole, con carte non sovrapposte in modo inaccessibile.
+- [x] Ridurre la chat a icona e consentirne l’espansione e la chiusura.
+- [x] Testare input, mano mobile e chat compressa su desktop e smartphone.
+- [x] Salvare checkpoint e consegnare l’aggiornamento di interazione.
+- [x] Riprodurre e isolare il mancato rilascio della carta con mouse.
+- [x] Sostituire il drag nativo con una gestione pointer coerente tra mouse e touch.
+- [x] Testare trascinamento e rilascio mouse/touch nel campo di gioco.
+- [x] Salvare checkpoint e consegnare la correzione del drag mouse.
+- [x] Verificare nel browser il drag-and-drop reale con mouse e touch, incluso il rilascio nel campo (Playwright: 2/2 test superati).
+- [x] Salvare checkpoint e consegnare la correzione verificata del drag mouse.
+- [x] Ripristinare la struttura della schermata iniziale alterata dalla modifica visuale.
+- [x] Applicare le dimensioni 40×89 px esclusivamente all’emblema.
+- [x] Verificare layout e compilazione della schermata ripristinata.
+- [x] Salvare checkpoint e consegnare il ripristino dell’emblema.
+- [x] Individuare il caricamento shader Babylon che riceve HTML invece di GLSL.
+- [x] Correggere o disattivare in sicurezza il renderer 3D mantenendo il fondale del tavolo.
+- [x] Verificare che la console browser sia libera da errori shader e che l’app compili.
+- [x] Salvare checkpoint e consegnare la correzione del renderer.
+- [x] Allineare l’emblema in alto a sinistra al livello del titolo Cotecchio.
+- [x] Verificare la resa della testata su desktop e mobile.
+- [x] Salvare checkpoint e consegnare l’allineamento dell’emblema.
+- [x] Riprodurre la scomparsa dell’ultima carta nella risoluzione della presa online.
+- [x] Mantenere visibile la presa completa prima di assegnarne i punti.
+- [x] Rendere antiorario l’ordine di turno rispetto alla disposizione dei posti online.
+- [x] Ruotare in senso antiorario il primo giocatore di ogni nuova smazzata.
+- [x] Testare carte, turni e rotazione su più smazzate online.
+- [x] Salvare checkpoint e consegnare la correzione della sequenza online.
+- [x] Riprodurre in integrazione online la presa completa visibile durante il polling prima della risoluzione.
+- [x] Verificare esplicitamente il verso antiorario dei posti e dei turni per tavoli da tre e quattro giocatori.
+- [x] Testare più smazzate online con cambio del primo giocatore in senso antiorario.
+- [x] Salvare checkpoint e consegnare la sequenza online verificata.
+- [x] Testare in integrazione online i turni antiorari per tavoli da tre e quattro partecipanti.
+- [x] Testare tre smazzate online consecutive con rotazione antioraria del primo giocatore.
+- [x] Salvare checkpoint e consegnare la sequenza online verificata su più tavoli.
+- [x] Fissare a 100 punti il limite delle partite online e rimuovere il selettore dalla modalità online.
+- [x] Formalizzare la presa CPU a costo zero e la presa controllata con 2/3 di bastoni da ultimi.
+- [x] Applicare la priorità di scarto: Pelliccione, 3/2 di bastoni, poi assi e 3/2 degli altri semi.
+- [x] Testare limite online, prese vantaggiose, Pelliccione nascosto e gerarchia degli scarti.
+- [x] Salvare checkpoint e consegnare l’aggiornamento di limite e CPU.
+- [x] Formalizzare il parafallo e il compromesso tra apertura sicura e seme corto.
+- [x] Implementare la scelta d’apertura CPU che favorisce carte sicure dei semi più corti.
+- [x] Testare parafallo, pari merito fra semi corti e protezione di Pelliccione/2/3 di bastoni.
+- [x] Salvare checkpoint e consegnare l’aggiornamento parafallo della CPU.
+- [x] Testare il parafallo quando più semi sicuri hanno la stessa lunghezza minima.
+- [x] Salvare checkpoint e consegnare l’aggiornamento parafallo verificato.
+- [x] Riprodurre e correggere l’animazione Pelliccione nelle smazzate successive alla prima.
+- [x] Sostituire i nomi CPU con i partecipanti reali nelle partite online.
+- [x] Formalizzare e implementare “Chiuso in mano” con conferma, certezza matematica e assegnazione delle prese residue.
+- [x] Testare eventi ripetuti, identità online e chiusura in mano locale/online.
+- [x] Salvare checkpoint e consegnare l’aggiornamento delle partite.
+- [x] Testare il trigger Pelliccione in due smazzate consecutive.
+- [x] Testare la sostituzione dei nomi CPU con il roster della sala online.
+- [x] Testare la procedura online di chiusura in mano con errore sul caso non certo.
+- [x] Aggiungere un test d’integrazione server della chiusura in mano online, per successo e rifiuto del caso non certo.
+- [x] Salvare checkpoint e consegnare l’aggiornamento delle partite verificato online.
+- [x] Rendere “Chiuso in mano” disponibile in ogni proprio turno, anche senza certezza matematica.
+- [x] Applicare alla prima presa della smazzata la regola speciale: 16 punti al dichiarante e 0 agli altri, senza cappotto.
+- [x] Aggiornare conferma e messaggi per chiarire l’esito della dichiarazione libera.
+- [x] Testare dichiarazione libera, prima presa e chiusura a smazzata avanzata locale/online.
+- [x] Salvare checkpoint e consegnare la regola aggiornata di chiusura in mano.
+- [x] Mostrare nel riepilogo l’esito di “Chiuso in mano”, incluso il caso speciale da 16 punti alla prima presa.
+- [x] Testare locale e online la chiusura in mano dopo almeno una presa già completata.
+- [x] Salvare checkpoint e consegnare la dichiarazione libera verificata.
+- [x] Mostrare nel riepilogo di fine smazzata l’esito “Chiuso in mano”, distinguendo la prima presa da 16 punti.
+- [x] Salvare checkpoint e consegnare il riepilogo aggiornato della dichiarazione libera.
+- [x] Estendere il punteggio speciale fino a quando nessun avversario abbia preso un punto intero nella smazzata.
+- [x] Mostrare “Chiuso in mano” sopra il pulsante Pausa nel proprio turno.
+- [x] Aggiornare conferme e riepiloghi per la nuova soglia del punto intero avversario.
+- [x] Testare soglia avversaria, punteggi e posizione del pulsante su desktop/mobile.
+- [x] Salvare checkpoint e consegnare la regola aggiornata.
+- [x] Definire chiusura unanime: la partita termina solo se tutti i giocatori rimasti votano di concludere; ogni voto per continuare riavvia il tavolo ridotto.
+- [x] Persistire stato di abbandono, voti e punteggi precedenti alla smazzata interrotta.
+- [x] Annullare la smazzata in corso dopo un abbandono e ripartire senza il giocatore uscente se il tavolo continua.
+- [x] Terminare senza storico la partita quando tutti i giocatori rimasti concordano la chiusura.
+- [x] Assegnare 0 al giocatore uscente e riprendere a punteggi invariati per gli altri in caso di continuazione.
+- [x] Correggere segnalazione e flussi WebRTC di audio/video su desktop.
+- [x] Limitare il mobile alla richiesta e condivisione del solo audio.
+- [x] Testare voto abbandono, ripartenza, storico e comunicazione desktop/mobile.
+- [x] Salvare checkpoint e consegnare l’aggiornamento multiplayer.
+- [x] Aggiungere un test d’integrazione della sala per abbandono, votazione, annullamento della smazzata e ripartenza a punteggi invariati.
+- [x] Documentare la verifica hardware richiesta per flussi audio/video tra due account reali, oltre ai test automatici desktop/mobile.
+- [x] Salvare checkpoint e consegnare l’aggiornamento multiplayer verificato.
+- [x] Salvare checkpoint pubblicabile dopo abbandono consensuale e correzioni audio/video.
+- [x] Sostituire i nomi CPU con l’elenco di personaggi fornito.
+- [x] Animare il lancio nervoso delle carte dopo “Chiuso in mano” e prima del riepilogo.
+- [x] Testare nomi CPU, durata dell’animazione e apertura differita del riepilogo.
+- [x] Salvare checkpoint e consegnare nomi e animazione aggiornati.
+- [x] Definire asset e palette per Taverna, Cibali, Balconera, Massimino e Mestalla.
+- [x] Aggiungere un selettore del tema tavolo al setup locale e online.
+- [x] Applicare il tema solo al rendering, senza trasmetterlo né usarlo nel matchmaking.
+- [x] Realizzare Cibali con tavolo quadrato in legno scuro e panno verde.
+- [x] Realizzare Balconera con vetro scuro, terrazzo di lusso e accento di sole.
+- [x] Realizzare Massimino con marmo, interno elegante e illuminazione calda.
+- [x] Realizzare Mestalla con ferro battuto, righe strette e atmosfera esterna.
+- [x] Testare tutti i temi su desktop/mobile e verificare il matchmaking invariato.
+- [x] Salvare checkpoint e consegnare i tavoli grafici.
+- [x] Verificare in browser desktop la resa di Taverna, Cibali, Balconera, Massimino e Mestalla durante una partita.
+- [x] Verificare il selettore dei temi nel layout mobile e il riadattamento a tre colonne.
+- [x] Verificare con test dedicato che la preferenza grafica non faccia parte delle richieste di creazione, ingresso o matchmaking online.

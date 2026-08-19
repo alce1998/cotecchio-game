@@ -1,0 +1,59 @@
+.hand-area {
+  justify-content: flex-start;
+  gap: 9px;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 14px;
+  touch-action: pan-x;
+}
+
+.hand-area .piacentine-card,
+.hand-area .piacentine-card:first-child,
+.hand-area .piacentine-card:nth-child(2n),
+.hand-area .piacentine-card:nth-child(3n) {
+  flex: 0 0 auto;
+  margin-left: 0;
+  transform: none;
+  scroll-snap-align: center;
+}
+
+.hand-area .piacentine-card:not(.disabled):is(:hover, :focus-visible, .selected) {
+  z-index: 6;
+  filter: brightness(1.08) saturate(1.12);
+  outline: 3px solid #f1cf7d;
+  outline-offset: 3px;
+  transform: translateY(-14px) scale(1.025);
+  box-shadow: 0 19px 25px rgba(0, 0, 0, 0.48), 0 0 0 3px rgba(241, 207, 125, 0.22);
+}
+
+.hand-area .piacentine-card.dragging {
+  position: relative;
+  z-index: 30;
+  pointer-events: none;
+  transform: translate(var(--drag-x), var(--drag-y)) rotate(3deg) scale(1.06);
+  filter: brightness(1.08) drop-shadow(0 18px 20px rgba(0, 0, 0, 0.48));
+}
+
+.trick-zone {
+  transition: filter 160ms ease-out, box-shadow 160ms ease-out;
+}
+
+.trick-zone:has(.piacentine-card.dragging) {
+  filter: brightness(1.12);
+}
+
+@media (max-width: 620px) {
+  .hand-area {
+    padding-inline: 12px;
+    gap: 10px;
+    scrollbar-width: auto;
+  }
+
+  .hand-area .piacentine-card,
+  .hand-area .piacentine-card:nth-child(2n),
+  .hand-area .piacentine-card:nth-child(3n) {
+    width: 64px;
+    height: 111px;
+  }
+}

@@ -1,0 +1,16 @@
+.setup-logo {
+  position: absolute;
+  top: 48px;
+  left: 36px;
+  width: 40px !important;
+  height: 89px !important;
+  margin: 0;
+  object-position: 50% 42%;
+}
+
+@media (max-width: 620px) {
+  .setup-logo {
+    top: 32px;
+    left: 26px;
+  }
+}
