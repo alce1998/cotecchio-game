@@ -21,10 +21,15 @@ export async function getDb() {
 const inMemoryUsers = new Map<string, any>();
 let nextUserId = 1;
 
+import { getUserFromFirestore, saveUserToFirestore } from "./firestore";
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
+
+  // Save to Firestore asynchronously for permanent persistence across restarts
+  saveUserToFirestore(user).catch(() => undefined);
 
   const db = await getDb();
   if (!db) {
@@ -105,7 +110,15 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    return inMemoryUsers.get(openId);
+    let local = inMemoryUsers.get(openId);
+    if (!local) {
+      const fsUser = await getUserFromFirestore(openId);
+      if (fsUser) {
+        inMemoryUsers.set(openId, fsUser);
+        return fsUser;
+      }
+    }
+    return local;
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);

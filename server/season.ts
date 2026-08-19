@@ -66,9 +66,15 @@ export function recordInMemoryMatch(userId: number, name: string | null, finalSc
   });
 }
 
+import { getSeasonLeaderboardFromFirestore } from "./firestore";
+
 export async function getSeasonLeaderboard(now = new Date()) {
   const db = await getDb();
   if (!db) {
+    const fsBoard = await getSeasonLeaderboardFromFirestore(now);
+    if (fsBoard && fsBoard.entries.length > 0) {
+      return fsBoard;
+    }
     return aggregateSeasonResults(inMemorySeasonResults, now);
   }
   try {
@@ -85,7 +91,9 @@ export async function getSeasonLeaderboard(now = new Date()) {
       .where(and(gte(gameMatches.finishedAt, seasonWindow(now).start), lt(gameMatches.finishedAt, seasonWindow(now).end)));
     return aggregateSeasonResults(rows, now);
   } catch (err) {
-    console.warn("[Season] DB query failed, falling back to in-memory season results:", err);
+    console.warn("[Season] DB query failed, falling back to Firestore/in-memory season results:", err);
+    const fsBoard = await getSeasonLeaderboardFromFirestore(now);
+    if (fsBoard && fsBoard.entries.length > 0) return fsBoard;
     return aggregateSeasonResults(inMemorySeasonResults, now);
   }
 }

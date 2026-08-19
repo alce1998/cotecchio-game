@@ -5,6 +5,7 @@ import { autoPlay, closeInHand, createGame, matchRanking, nextDeal, playCard, re
 import type { GameState, PlayedCard } from "../client/src/game/types";
 import { getDb, getUserByOpenId } from "./db";
 import { recordInMemoryMatch } from "./season";
+import { recordMatchToFirestore } from "./firestore";
 
 const TURN_MS = 30_000;
 const TRICK_REVEAL_MS = 2_000;
@@ -376,6 +377,7 @@ async function persistFinishedMatch(room: RoomRow, game: GameState) {
     const entry = roster.find((r) => r.seat === result.id);
     if (!player) continue;
     recordInMemoryMatch(player.userId, entry?.name ?? null, result.score);
+    recordMatchToFirestore({ matchId: room.matchId, userId: player.userId, name: entry?.name ?? null, finalScore: result.score, placement: result.place }).catch(() => undefined);
     if (db) {
       try {
         await db.insert(gameMatchResults).values({ matchId: room.matchId, userId: player.userId, placement: result.place, finalScore: result.score, leaguePoints: result.leaguePoints }).onDuplicateKeyUpdate({ set: { placement: result.place, finalScore: result.score, leaguePoints: result.leaguePoints } });
