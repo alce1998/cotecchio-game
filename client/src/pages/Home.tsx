@@ -5,6 +5,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
+import GameCanvas from "@/components/GameCanvas";
 import LoginModal from "@/components/LoginModal";
 import { autoPlay, closeInHand, createGame, isLegalForHuman, matchRanking, nextDeal, playCard, resolveTrick } from "@/game/engine";
 import { cardLabel, RANK_LABEL, SUIT_LABEL } from "@/game/rules";
