@@ -18,6 +18,9 @@ export async function getDb() {
   return _db;
 }
 
+const inMemoryUsers = new Map<string, any>();
+let nextUserId = 1;
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
@@ -25,7 +28,29 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
+    let existing = inMemoryUsers.get(user.openId);
+    const now = new Date();
+    if (!existing) {
+      existing = {
+        id: nextUserId++,
+        openId: user.openId,
+        name: user.name ?? "Giocatore",
+        email: user.email ?? null,
+        loginMethod: user.loginMethod ?? "quick",
+        role: user.openId === ENV.ownerOpenId ? "admin" : "user",
+        avatarUrl: null,
+        createdAt: now,
+        updatedAt: now,
+        lastSignedIn: now,
+      };
+    } else {
+      if (user.name !== undefined) existing.name = user.name;
+      if (user.email !== undefined) existing.email = user.email;
+      if (user.loginMethod !== undefined) existing.loginMethod = user.loginMethod;
+      existing.lastSignedIn = user.lastSignedIn ?? now;
+      existing.updatedAt = now;
+    }
+    inMemoryUsers.set(user.openId, existing);
     return;
   }
 
@@ -80,8 +105,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 export async function getUserByOpenId(openId: string) {
   const db = await getDb();
   if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
+    return inMemoryUsers.get(openId);
   }
 
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);

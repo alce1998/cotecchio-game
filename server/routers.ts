@@ -1,16 +1,65 @@
-import { COOKIE_NAME } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { z } from "zod";
 import { closeOnlineInHand, createPrivateRoom, joinMatchmaking, joinPrivateByCode, leaveOnlineRoom, nextOnlineDeal, playOnlineCard, postRoomChat, resumeOnlinePause, roomChat, roomMediaStates, sendWebrtcSignal, setProfileAvatar, setReady, setRoomMediaState, snapshot, useOnlinePause, voteAfterDeparture, webRtcSignals } from "./matchmaking";
 import { getSeasonLeaderboard } from "./season";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { sdk } from "./_core/sdk";
+import { getUserByOpenId, upsertUser } from "./db";
 
 export const appRouter = router({
     // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
+    loginQuick: publicProcedure
+      .input(z.object({ name: z.string().min(1).max(50), email: z.string().email().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const name = input.name.trim();
+        const cleanName = name.replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ_\s]/g, "") || "Giocatore";
+        const openId = `user_${Buffer.from(cleanName).toString("hex").slice(0, 16)}_${Date.now().toString(36)}`;
+        await upsertUser({
+          openId,
+          name: cleanName,
+          email: input.email ?? null,
+          loginMethod: input.email ? "google" : "quick",
+          lastSignedIn: new Date(),
+        });
+        const token = await sdk.createSessionToken(openId, { name: cleanName });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        const user = await getUserByOpenId(openId);
+        return { success: true, user };
+      }),
+    loginGoogle: publicProcedure
+      .input(z.object({ credential: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const parts = input.credential.split(".");
+        if (parts.length !== 3) {
+          throw new Error("Token Google non valido");
+        }
+        const payloadJson = Buffer.from(parts[1], "base64url").toString("utf-8");
+        const payload = JSON.parse(payloadJson);
+        const googleSub = payload.sub || `g_${Date.now()}`;
+        const email = payload.email || `${googleSub}@google.com`;
+        const name = payload.name || payload.given_name || "Giocatore Google";
+        const openId = `google_${googleSub}`;
+
+        await upsertUser({
+          openId,
+          name,
+          email,
+          loginMethod: "google",
+          lastSignedIn: new Date(),
+        });
+
+        const token = await sdk.createSessionToken(openId, { name });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        const user = await getUserByOpenId(openId);
+        return { success: true, user };
+      }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
