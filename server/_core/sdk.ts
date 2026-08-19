@@ -154,7 +154,7 @@ class SDKServer {
   }
 
   private getSessionSecret() {
-    const secret = ENV.cookieSecret;
+    const secret = ENV.cookieSecret || "cotecchio-game-super-secret-jwt-key-2026-default-fallback-secure";
     return new TextEncoder().encode(secret);
   }
 
