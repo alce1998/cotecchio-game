@@ -4,6 +4,7 @@ import { gameMatchResults, gameMatches, gameRoomMediaStates, gameRoomMessages, g
 import { autoPlay, closeInHand, createGame, matchRanking, nextDeal, playCard, resolveTrick } from "../client/src/game/engine";
 import type { GameState, PlayedCard } from "../client/src/game/types";
 import { getDb } from "./db";
+import { recordInMemoryMatch } from "./season";
 
 const TURN_MS = 30_000;
 const TRICK_REVEAL_MS = 2_000;
@@ -186,10 +187,19 @@ async function persistFinishedMatch(room: RoomRow, game: GameState) {
   for (const result of ranking) {
     const player = rows.find((row) => row.seat === result.id);
     if (!player) continue;
-    await db.insert(gameMatchResults).values({ matchId: room.matchId, userId: player.userId, placement: result.place, finalScore: result.score, leaguePoints: result.leaguePoints }).onDuplicateKeyUpdate({ set: { placement: result.place, finalScore: result.score, leaguePoints: result.leaguePoints } });
+    recordInMemoryMatch(player.userId, player.name, result.score);
+    try {
+      await db.insert(gameMatchResults).values({ matchId: room.matchId, userId: player.userId, placement: result.place, finalScore: result.score, leaguePoints: result.leaguePoints }).onDuplicateKeyUpdate({ set: { placement: result.place, finalScore: result.score, leaguePoints: result.leaguePoints } });
+    } catch (err) {
+      console.warn("[Matchmaking] DB insert gameMatchResults failed (in-memory mode):", err);
+    }
   }
-  await db.update(gameMatches).set({ status: "finished", finalState: JSON.stringify(game), finishedAt: new Date() }).where(eq(gameMatches.id, room.matchId));
-  await db.update(gameRooms).set({ status: "finished", gameState: JSON.stringify(game), turnDeadlineAt: null, version: room.version + 1 }).where(eq(gameRooms.id, room.id));
+  try {
+    await db.update(gameMatches).set({ status: "finished", finalState: JSON.stringify(game), finishedAt: new Date() }).where(eq(gameMatches.id, room.matchId));
+    await db.update(gameRooms).set({ status: "finished", gameState: JSON.stringify(game), turnDeadlineAt: null, version: room.version + 1 }).where(eq(gameRooms.id, room.id));
+  } catch (err) {
+    console.warn("[Matchmaking] DB update finished match failed (in-memory mode):", err);
+  }
   return roomById(room.id);
 }
 

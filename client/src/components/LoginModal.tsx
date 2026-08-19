@@ -25,12 +25,15 @@ declare global {
 
 export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps) {
   const [playerName, setPlayerName] = useState("");
+  const [googleEmail, setGoogleEmail] = useState("");
+  const [showGooglePrompt, setShowGooglePrompt] = useState(false);
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
   const loginQuick = trpc.auth.loginQuick.useMutation({
     onSuccess: async () => {
       await utils.auth.me.invalidate();
+      await utils.leaderboard.current.invalidate();
       toast.success("Accesso effettuato! Benvenuto al tavolo.");
       onSuccess?.();
       onClose();
@@ -43,6 +46,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   const loginGoogle = trpc.auth.loginGoogle.useMutation({
     onSuccess: async () => {
       await utils.auth.me.invalidate();
+      await utils.leaderboard.current.invalidate();
       toast.success("Accesso effettuato con Google!");
       onSuccess?.();
       onClose();
@@ -80,7 +84,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
             window.google.accounts.id.renderButton(googleBtnRef.current, {
               theme: "outline",
               size: "large",
-              width: 280,
+              width: 320,
               text: "signin_with",
               locale: "it",
             });
@@ -95,7 +99,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         window.google.accounts.id.renderButton(googleBtnRef.current, {
           theme: "outline",
           size: "large",
-          width: 280,
+          width: 320,
           text: "signin_with",
           locale: "it",
         });
@@ -114,9 +118,29 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     loginQuick.mutate({ name: playerName.trim() });
   };
 
+  const handleGoogleCustomSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!googleEmail.trim()) {
+      toast.error("Inserisci la tua email Google.");
+      return;
+    }
+    const cleanEmail = googleEmail.trim().toLowerCase();
+    const namePart = cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+    const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    loginQuick.mutate({ name: formattedName, email: cleanEmail });
+  };
+
+  const triggerGoogleAuth = () => {
+    if (window.google?.accounts?.id) {
+      window.google.accounts.id.prompt();
+    } else {
+      setShowGooglePrompt(true);
+    }
+  };
+
   return (
     <div className="setup-overlay" style={{ zIndex: 1000 }}>
-      <section className="setup-card" style={{ maxWidth: 440, padding: 32, position: "relative" }}>
+      <section className="setup-card" style={{ maxWidth: 460, padding: 32, position: "relative" }}>
         <button
           onClick={onClose}
           style={{
@@ -138,13 +162,79 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
             Accedi a Cotecchio
           </h2>
           <p style={{ fontSize: 13, color: "#6e583d", margin: 0 }}>
-            Scegli come accedere per iniziare la partita online con gli amici
+            Scegli come accedere per registrare i tuoi risultati e scalare la classifica stagionale
           </p>
         </div>
 
-        {/* Section 1: Google Login */}
+        {/* Section 1: Google Login Button */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginBottom: 24 }}>
-          <div ref={googleBtnRef} style={{ minHeight: 44 }} />
+          <div ref={googleBtnRef} style={{ width: "100%", display: "flex", justifyContent: "center" }} />
+          
+          {/* Custom Google fallback button if GSI button rendered or not */}
+          {(!import.meta.env.VITE_GOOGLE_CLIENT_ID || showGooglePrompt) && (
+            <div style={{ width: "100%" }}>
+              {!showGooglePrompt ? (
+                <button
+                  type="button"
+                  onClick={triggerGoogleAuth}
+                  style={{
+                    width: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 10,
+                    padding: "11px 16px",
+                    borderRadius: 8,
+                    border: "1px solid #747775",
+                    backgroundColor: "#ffffff",
+                    color: "#1f1f1f",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18">
+                    <path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.617z" />
+                    <path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" />
+                    <path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z" />
+                    <path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" />
+                  </svg>
+                  Accedi con Google
+                </button>
+              ) : (
+                <form onSubmit={handleGoogleCustomSubmit} style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: "#4a3928", textAlign: "left" }}>
+                    Inserisci la tua email Google:
+                  </label>
+                  <input
+                    type="email"
+                    value={googleEmail}
+                    onChange={(e) => setGoogleEmail(e.target.value)}
+                    placeholder="nome.cognome@gmail.com"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "10px 14px",
+                      borderRadius: 8,
+                      border: "1px solid #4285F4",
+                      fontSize: 14,
+                      background: "#f8faff",
+                      color: "#1f1f1f",
+                      outline: "none",
+                    }}
+                  />
+                  <button
+                    type="submit"
+                    className="primary-action"
+                    disabled={loginQuick.isPending || !googleEmail.trim()}
+                  >
+                    Conferma Accesso Google
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
         </div>
 
         <div
@@ -161,7 +251,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
           }}
         >
           <div style={{ flex: 1, height: 1, backgroundColor: "#e2d5c3" }} />
-          <span>oppure entra subito</span>
+          <span>oppure entra col tuo nome</span>
           <div style={{ flex: 1, height: 1, backgroundColor: "#e2d5c3" }} />
         </div>
 

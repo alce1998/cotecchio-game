@@ -54,19 +54,38 @@ export function aggregateSeasonResults(rows: SeasonResultRecord[], now = new Dat
   };
 }
 
+const inMemorySeasonResults: SeasonResultRecord[] = [];
+
+export function recordInMemoryMatch(userId: number, name: string | null, finalScore: number) {
+  inMemorySeasonResults.push({
+    userId,
+    name,
+    finalScore,
+    status: "finished",
+    finishedAt: new Date(),
+  });
+}
+
 export async function getSeasonLeaderboard(now = new Date()) {
   const db = await getDb();
-  if (!db) throw new Error("La classifica non è disponibile.");
-  const rows = await db.select({
-    userId: users.id,
-    name: users.name,
-    finalScore: gameMatchResults.finalScore,
-    status: gameMatches.status,
-    finishedAt: gameMatches.finishedAt,
-  })
-    .from(gameMatchResults)
-    .innerJoin(gameMatches, eq(gameMatchResults.matchId, gameMatches.id))
-    .innerJoin(users, eq(gameMatchResults.userId, users.id))
-    .where(and(gte(gameMatches.finishedAt, seasonWindow(now).start), lt(gameMatches.finishedAt, seasonWindow(now).end)));
-  return aggregateSeasonResults(rows, now);
+  if (!db) {
+    return aggregateSeasonResults(inMemorySeasonResults, now);
+  }
+  try {
+    const rows = await db.select({
+      userId: users.id,
+      name: users.name,
+      finalScore: gameMatchResults.finalScore,
+      status: gameMatches.status,
+      finishedAt: gameMatches.finishedAt,
+    })
+      .from(gameMatchResults)
+      .innerJoin(gameMatches, eq(gameMatchResults.matchId, gameMatches.id))
+      .innerJoin(users, eq(gameMatchResults.userId, users.id))
+      .where(and(gte(gameMatches.finishedAt, seasonWindow(now).start), lt(gameMatches.finishedAt, seasonWindow(now).end)));
+    return aggregateSeasonResults(rows, now);
+  } catch (err) {
+    console.warn("[Season] DB query failed, falling back to in-memory season results:", err);
+    return aggregateSeasonResults(inMemorySeasonResults, now);
+  }
 }
