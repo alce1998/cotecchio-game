@@ -66,12 +66,41 @@ function initials(name: string) { return name.split(/\s+/).map((part) => part[0]
 function PlayerMediaTile({ name, avatarUrl, stream, videoEnabled, audioEnabled, own, onAudio, onVideo, videoAllowed = true }: { name: string; avatarUrl?: string | null; stream?: MediaStream; videoEnabled: boolean; audioEnabled: boolean; own?: boolean; onAudio?: () => void; onVideo?: () => void; videoAllowed?: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  useEffect(() => { if (videoRef.current) videoRef.current.srcObject = stream ?? null; if (audioRef.current) audioRef.current.srcObject = stream ?? null; }, [stream]);
-  return <div className={`player-media ${videoEnabled && stream ? "has-video" : ""}`} aria-label={`Profilo di ${name}`}>
-    {videoEnabled && stream ? <video ref={videoRef} autoPlay playsInline muted={own} /> : avatarUrl ? <img className="profile-photo" src={avatarUrl} alt={`Foto profilo di ${name}`} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <div className="profile-avatar"><span>{initials(name)}</span></div>}
+
+  useEffect(() => {
+    if (videoRef.current && stream && videoEnabled) {
+      if (videoRef.current.srcObject !== stream) {
+        videoRef.current.srcObject = stream;
+      }
+      videoRef.current.play().catch(() => undefined);
+    }
+  }, [stream, videoEnabled]);
+
+  useEffect(() => {
+    if (audioRef.current && stream && !own) {
+      if (audioRef.current.srcObject !== stream) {
+        audioRef.current.srcObject = stream;
+      }
+      audioRef.current.play().catch(() => undefined);
+    }
+  }, [stream, own]);
+
+  const hasVideoStream = Boolean(videoEnabled && stream);
+
+  return <div className={`player-media ${hasVideoStream ? "has-video" : ""}`} aria-label={`Profilo di ${name}`}>
+    <video
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted={own}
+      style={{ display: hasVideoStream ? "block" : "none", width: "100%", height: "100%", objectFit: "cover" }}
+    />
+    {!hasVideoStream && (
+      avatarUrl ? <img className="profile-photo" src={avatarUrl} alt={`Foto profilo di ${name}`} onError={(event) => { event.currentTarget.style.display = "none"; }} /> : <div className="profile-avatar"><span>{initials(name)}</span></div>
+    )}
     {stream && !own && <audio ref={audioRef} autoPlay />}
-    <div className="media-presence">{audioEnabled ? <Mic size={11} /> : <MicOff size={11} />}{videoEnabled ? <Video size={11} /> : <VideoOff size={11} />}</div>
-    {own && <div className="media-controls"><button onClick={onAudio} aria-label={audioEnabled ? "Disattiva microfono" : "Attiva microfono"}>{audioEnabled ? <Mic size={13} /> : <MicOff size={13} />}</button>{videoAllowed && <button onClick={onVideo} aria-label={videoEnabled ? "Disattiva videocamera" : "Attiva videocamera"}>{videoEnabled ? <Video size={13} /> : <Camera size={13} />}</button>}</div>}
+    <div className="media-presence">{audioEnabled ? <Mic size={12} /> : <MicOff size={12} />}{videoEnabled ? <Video size={12} /> : <VideoOff size={12} />}</div>
+    {own && <div className="media-controls"><button onClick={onAudio} aria-label={audioEnabled ? "Disattiva microfono" : "Attiva microfono"}>{audioEnabled ? <Mic size={14} /> : <MicOff size={14} />}</button>{videoAllowed && <button onClick={onVideo} aria-label={videoEnabled ? "Disattiva videocamera" : "Attiva videocamera"}>{videoEnabled ? <Video size={14} /> : <Camera size={14} />}</button>}</div>}
   </div>;
 }
 

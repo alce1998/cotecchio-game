@@ -33,7 +33,7 @@ export const appRouter = router({
         return { success: true, user };
       }),
     loginGoogle: publicProcedure
-      .input(z.object({ credential: z.string().min(1) }))
+      .input(z.object({ credential: z.string().min(1), nickname: z.string().min(1).max(50).optional() }))
       .mutation(async ({ ctx, input }) => {
         const parts = input.credential.split(".");
         if (parts.length !== 3) {
@@ -43,7 +43,8 @@ export const appRouter = router({
         const payload = JSON.parse(payloadJson);
         const googleSub = payload.sub || `g_${Date.now()}`;
         const email = payload.email || `${googleSub}@google.com`;
-        const name = payload.name || payload.given_name || "Giocatore Google";
+        const googleDefaultName = payload.name || payload.given_name || "Giocatore Google";
+        const name = (input.nickname?.trim() || googleDefaultName).replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ_\s]/g, "") || "Giocatore";
         const openId = `google_${googleSub}`;
 
         await upsertUser({
