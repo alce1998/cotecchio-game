@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cotecchio</string>
+    <string name="title_activity_main">Cotecchio</string>
+    <string name="package_name">com.alce.cotecchio</string>
+    <string name="custom_url_scheme">com.alce.cotecchio</string>
+</resources>

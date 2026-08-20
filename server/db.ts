@@ -126,4 +126,24 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function getUserByEmail(email: string) {
+  const cleanEmail = email.toLowerCase().trim();
+  const db = await getDb();
+  if (!db) {
+    let local = Array.from(inMemoryUsers.values()).find((u) => u.email?.toLowerCase().trim() === cleanEmail);
+    if (!local) {
+      const fsUser = await getUserByEmailFromFirestore(cleanEmail);
+      if (fsUser) {
+        inMemoryUsers.set(fsUser.openId, fsUser);
+        return fsUser;
+      }
+    }
+    return local;
+  }
+
+  const result = await db.select().from(users).where(eq(users.email, cleanEmail)).limit(1);
+
+  return result.length > 0 ? result[0] : undefined;
+}
+
 // TODO: add feature queries here as your schema grows.

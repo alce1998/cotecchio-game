@@ -6,30 +6,57 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/sdk";
-import { getUserByOpenId, upsertUser } from "./db";
+import { getUserByEmail, getUserByOpenId, upsertUser } from "./db";
+
+import crypto from "crypto";
+
+function hashPassword(password: string): string {
+  const salt = "cotecchio_salt_2026";
+  return crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
+}
 
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
-    loginQuick: publicProcedure
-      .input(z.object({ name: z.string().min(1).max(50), email: z.string().email().optional() }))
+    registerEmail: publicProcedure
+      .input(z.object({ email: z.string().email(), nickname: z.string().min(2).max(30), password: z.string().min(6) }))
       .mutation(async ({ ctx, input }) => {
-        const name = input.name.trim();
-        const cleanName = name.replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ_\s]/g, "") || "Giocatore";
-        const openId = `user_${Buffer.from(cleanName).toString("hex").slice(0, 16)}_${Date.now().toString(36)}`;
+        const cleanEmail = input.email.toLowerCase().trim();
+        const existing = await getUserByEmail(cleanEmail);
+        if (existing) {
+          throw new Error("Un account con questa email esiste già. Accedi con le tue credenziali.");
+        }
+        const nickname = input.nickname.trim();
+        const passwordHash = hashPassword(input.password);
+        const openId = `email_${cleanEmail.replace(/[^a-z0-9]/g, "_")}`;
+
         await upsertUser({
           openId,
-          name: cleanName,
-          email: input.email ?? null,
-          loginMethod: input.email ? "google" : "quick",
+          name: nickname,
+          email: cleanEmail,
+          loginMethod: "email",
+          passwordHash,
           lastSignedIn: new Date(),
         });
-        const token = await sdk.createSessionToken(openId, { name: cleanName });
+
+        const token = await sdk.createSessionToken(openId, { name: nickname });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         const user = await getUserByOpenId(openId);
+        return { success: true, user };
+      }),
+    loginEmail: publicProcedure
+      .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const cleanEmail = input.email.toLowerCase().trim();
+        const user = await getUserByEmail(cleanEmail);
+        if (!user || user.passwordHash !== hashPassword(input.password)) {
+          throw new Error("Email o password errati.");
+        }
+        const token = await sdk.createSessionToken(user.openId, { name: user.name });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         return { success: true, user };
       }),
     loginGoogle: publicProcedure

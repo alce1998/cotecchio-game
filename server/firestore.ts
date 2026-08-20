@@ -31,6 +31,7 @@ export async function saveUserToFirestore(user: {
   name: string | null;
   email?: string | null;
   loginMethod?: string | null;
+  passwordHash?: string | null;
   avatarUrl?: string | null;
   lastSignedIn?: Date;
 }) {
@@ -44,8 +45,9 @@ export async function saveUserToFirestore(user: {
       await ref.set({
         openId: user.openId,
         name: user.name ?? "Giocatore",
-        email: user.email ?? null,
-        loginMethod: user.loginMethod ?? "quick",
+        email: user.email ? user.email.toLowerCase().trim() : null,
+        loginMethod: user.loginMethod ?? "email",
+        passwordHash: user.passwordHash ?? null,
         avatarUrl: user.avatarUrl ?? null,
         createdAt: now,
         updatedAt: now,
@@ -54,14 +56,41 @@ export async function saveUserToFirestore(user: {
     } else {
       const updateData: Record<string, any> = { updatedAt: now };
       if (user.name !== undefined) updateData.name = user.name;
-      if (user.email !== undefined) updateData.email = user.email;
+      if (user.email !== undefined) updateData.email = user.email ? user.email.toLowerCase().trim() : null;
       if (user.loginMethod !== undefined) updateData.loginMethod = user.loginMethod;
+      if (user.passwordHash !== undefined) updateData.passwordHash = user.passwordHash;
       if (user.avatarUrl !== undefined) updateData.avatarUrl = user.avatarUrl;
       if (user.lastSignedIn) updateData.lastSignedIn = user.lastSignedIn.toISOString();
       await ref.update(updateData);
     }
   } catch (err) {
     console.warn("[Firestore] saveUserToFirestore failed:", err);
+  }
+}
+
+export async function getUserByEmailFromFirestore(email: string) {
+  const fdb = getFirestoreDb();
+  if (!fdb) return null;
+  try {
+    const snap = await fdb.collection("users").where("email", "==", email.toLowerCase().trim()).limit(1).get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    const data = doc.data();
+    return {
+      id: Math.abs(hashCode(data.openId)),
+      openId: data.openId,
+      name: data.name || "Giocatore",
+      email: data.email || null,
+      loginMethod: data.loginMethod || "email",
+      passwordHash: data.passwordHash || null,
+      avatarUrl: data.avatarUrl || null,
+      createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+      updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+      lastSignedIn: data.lastSignedIn ? new Date(data.lastSignedIn) : new Date(),
+    };
+  } catch (err) {
+    console.warn("[Firestore] getUserByEmailFromFirestore failed:", err);
+    return null;
   }
 }
 
