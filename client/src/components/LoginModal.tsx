@@ -35,8 +35,19 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   const googleBtnRef = useRef<HTMLDivElement>(null);
   const utils = trpc.useUtils();
 
+  const [rememberMe, setRememberMe] = useState(true);
+
+  const handleSessionRemember = () => {
+    if (rememberMe) {
+      localStorage.setItem("cotecchio_remember_me", "true");
+    } else {
+      localStorage.removeItem("cotecchio_remember_me");
+    }
+  };
+
   const registerEmail = trpc.auth.registerEmail.useMutation({
     onSuccess: async () => {
+      handleSessionRemember();
       await utils.auth.me.invalidate();
       await utils.leaderboard.current.invalidate();
       toast.success("Account creato con successo! Benvenuto al tavolo.");
@@ -50,6 +61,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
 
   const loginEmail = trpc.auth.loginEmail.useMutation({
     onSuccess: async () => {
+      handleSessionRemember();
       await utils.auth.me.invalidate();
       await utils.leaderboard.current.invalidate();
       toast.success("Bentornato al tavolo!");
@@ -63,6 +75,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
 
   const loginGoogle = trpc.auth.loginGoogle.useMutation({
     onSuccess: async () => {
+      handleSessionRemember();
       await utils.auth.me.invalidate();
       await utils.leaderboard.current.invalidate();
       toast.success("Accesso effettuato con Google!");
@@ -406,6 +419,16 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
                     outline: "none",
                   }}
                 />
+              </label>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#4a3928", cursor: "pointer", marginTop: 4, textAlign: "left" }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  style={{ width: 16, height: 16, accentColor: "#194b3a", cursor: "pointer" }}
+                />
+                <span>Ricordami su questo dispositivo</span>
               </label>
 
               <button
