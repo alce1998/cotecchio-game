@@ -167,8 +167,7 @@ async function displayedPlayers(rows: PlayerRow[]) {
   if (!db) {
     return Promise.all(
       rows.map(async (row) => {
-        // Try finding by numeric id or openId
-        const user = Array.from((await import("./db")).getUserByOpenId ? [await getUserByOpenId(String(row.userId))] : []).find(Boolean);
+        const user = await getUserByOpenId(String(row.userId));
         return {
           seat: row.seat,
           name: user?.name?.trim() || `Giocatore ${row.seat + 1}`,

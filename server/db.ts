@@ -21,15 +21,23 @@ export async function getDb() {
 const inMemoryUsers = new Map<string, any>();
 let nextUserId = 1;
 
-import { getUserFromFirestore, saveUserToFirestore } from "./firestore";
+import { getUserByEmailFromFirestore, getUserFromFirestore, saveUserToFirestore } from "./firestore";
 
-export async function upsertUser(user: InsertUser): Promise<void> {
+export async function upsertUser(user: InsertUser & { passwordHash?: string | null }): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
   }
 
   // Save to Firestore asynchronously for permanent persistence across restarts
-  saveUserToFirestore(user).catch(() => undefined);
+  saveUserToFirestore({
+    openId: user.openId,
+    name: user.name ?? null,
+    email: user.email,
+    loginMethod: user.loginMethod,
+    passwordHash: user.passwordHash,
+    avatarUrl: user.avatarUrl,
+    lastSignedIn: user.lastSignedIn ? new Date(user.lastSignedIn) : undefined,
+  }).catch(() => undefined);
 
   const db = await getDb();
   if (!db) {
