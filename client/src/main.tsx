@@ -37,10 +37,17 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const getApiUrl = () => {
+  if (typeof window !== "undefined" && (window.location.origin.includes("localhost") || window.location.protocol.includes("capacitor"))) {
+    return "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app/api/trpc";
+  }
+  return "/api/trpc";
+};
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: getApiUrl(),
       transformer: superjson,
       headers() {
         // Preview auto-login fallback: when the browser blocks iframe cookies
