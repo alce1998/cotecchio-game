@@ -38,8 +38,10 @@ queryClient.getMutationCache().subscribe(event => {
 });
 
 const getApiUrl = () => {
-  if (typeof window !== "undefined" && (window.location.origin.includes("localhost") || window.location.protocol.includes("capacitor"))) {
-    return "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app/api/trpc";
+  if (typeof window !== "undefined") {
+    if (!window.location.hostname.includes("cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app")) {
+      return "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app/api/trpc";
+    }
   }
   return "/api/trpc";
 };

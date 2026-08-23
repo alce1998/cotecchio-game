@@ -5,3 +5,9 @@ runConfig:
   concurrency: 80
   cpu: 1
   memoryMiB: 512
+
+env:
+  - variable: NODE_ENV
+    value: production
+  - variable: JWT_SECRET
+    value: cotecchio_fallback_secret_key_2026_super_safe

@@ -1,0 +1,14 @@
+{
+  "projects": {},
+  "targets": {
+    "cotecchio-5f16c": {
+      "hosting": {
+        "main": [
+          "cotecchio-5f16c",
+          "cotecchio-game"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
