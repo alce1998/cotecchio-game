@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@babylonjs/core": "^9.21.0",
-    "@builder.io/vite-plugin-jsx-loc": "^0.1.1",
     "@capacitor/android": "^8.5.0",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
