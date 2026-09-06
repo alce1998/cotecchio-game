@@ -69,7 +69,8 @@ const trpcClient = trpc.createClient({
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          credentials: "same-origin",
+          credentials: "omit",
+          mode: "cors",
         });
       },
     }),

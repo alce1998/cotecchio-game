@@ -135,8 +135,30 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   };
 
   const handleForceLocalSession = () => {
-    const fallbackName = nickname.trim() || email.split("@")[0] || "Giocatore";
-    loginQuick.mutate({ name: fallbackName, email: email.trim() });
+    const fallbackName = nickname.trim() || (email ? email.split("@")[0] : "") || "Giocatore";
+    const localOpenId = `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const localUser = {
+      id: Date.now(),
+      openId: localOpenId,
+      name: fallbackName,
+      email: email.trim() || null,
+      loginMethod: "local",
+      role: "user",
+      avatarUrl: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lastSignedIn: new Date().toISOString(),
+    };
+
+    localStorage.setItem("cotecchio_token", localOpenId);
+    localStorage.setItem("cotecchio_user", JSON.stringify(localUser));
+    if (rememberMe) {
+      localStorage.setItem("cotecchio_remember_me", "true");
+    }
+    utils.auth.me.setData(undefined, localUser as any);
+    toast.success(`Benvenuto al tavolo, ${fallbackName}!`);
+    onSuccess?.();
+    onClose();
   };
 
   const isLoading = loginEmail.isPending || registerEmail.isPending || loginQuick.isPending;
