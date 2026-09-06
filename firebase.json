@@ -10,13 +10,6 @@
       ],
       "rewrites": [
         {
-          "source": "/api/**",
-          "run": {
-            "serviceId": "cotecchio-game",
-            "region": "europe-west4"
-          }
-        },
-        {
           "source": "**",
           "destination": "/index.html"
         }
@@ -31,13 +24,6 @@
         "**/node_modules/**"
       ],
       "rewrites": [
-        {
-          "source": "/api/**",
-          "run": {
-            "serviceId": "cotecchio-game",
-            "region": "europe-west4"
-          }
-        },
         {
           "source": "**",
           "destination": "/index.html"
