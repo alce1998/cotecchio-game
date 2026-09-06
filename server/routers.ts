@@ -44,7 +44,7 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         const user = await getUserByOpenId(openId);
-        return { success: true, user };
+        return { success: true, token, user };
       }),
     loginEmail: publicProcedure
       .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
@@ -57,7 +57,7 @@ export const appRouter = router({
         const token = await sdk.createSessionToken(user.openId, { name: user.name });
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-        return { success: true, user };
+        return { success: true, token, user };
       }),
     loginQuick: publicProcedure
       .input(z.object({ name: z.string().min(1).max(50), email: z.string().email().optional() }))
@@ -76,7 +76,7 @@ export const appRouter = router({
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         const user = await getUserByOpenId(openId);
-        return { success: true, user };
+        return { success: true, token, user };
       }),
     loginGoogle: publicProcedure
       .input(z.object({ credential: z.string().min(1), nickname: z.string().min(1).max(50).optional() }))

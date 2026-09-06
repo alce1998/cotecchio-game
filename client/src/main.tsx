@@ -48,13 +48,17 @@ const trpcClient = trpc.createClient({
       transformer: superjson,
       headers() {
         try {
-          const raw = sessionStorage.getItem("manus-cookie") || localStorage.getItem("manus-cookie");
-          if (raw) {
+          const token =
+            localStorage.getItem("cotecchio_token") ||
+            sessionStorage.getItem("cotecchio_token") ||
+            localStorage.getItem("manus-cookie") ||
+            sessionStorage.getItem("manus-cookie");
+          if (token) {
             const prefix = `${COOKIE_NAME}=`;
-            const pair = raw.split(";").find(s => s.trim().startsWith(prefix));
-            const token = pair ? pair.trim().slice(prefix.length) : raw.trim();
-            if (token) {
-              return { Authorization: `Bearer ${token}` };
+            const pair = token.split(";").find(s => s.trim().startsWith(prefix));
+            const cleanToken = pair ? pair.trim().slice(prefix.length) : token.trim();
+            if (cleanToken) {
+              return { Authorization: `Bearer ${cleanToken}` };
             }
           }
         } catch {
@@ -65,7 +69,7 @@ const trpcClient = trpc.createClient({
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          credentials: "include",
+          credentials: "same-origin",
         });
       },
     }),

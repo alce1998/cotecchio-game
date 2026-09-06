@@ -18,17 +18,20 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
 
   const utils = trpc.useUtils();
 
-  const handleSessionRemember = () => {
+  const saveToken = (token?: string) => {
+    if (!token) return;
     if (rememberMe) {
+      localStorage.setItem("cotecchio_token", token);
       localStorage.setItem("cotecchio_remember_me", "true");
     } else {
+      sessionStorage.setItem("cotecchio_token", token);
       localStorage.removeItem("cotecchio_remember_me");
     }
   };
 
   const loginQuick = trpc.auth.loginQuick.useMutation({
-    onSuccess: async () => {
-      handleSessionRemember();
+    onSuccess: async (data) => {
+      saveToken(data.token);
       await utils.auth.me.invalidate();
       await utils.leaderboard.current.invalidate();
       toast.success("Benvenuto al tavolo!");
@@ -41,8 +44,8 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   });
 
   const registerEmail = trpc.auth.registerEmail.useMutation({
-    onSuccess: async () => {
-      handleSessionRemember();
+    onSuccess: async (data) => {
+      saveToken(data.token);
       await utils.auth.me.invalidate();
       await utils.leaderboard.current.invalidate();
       toast.success("Account creato con successo! Benvenuto al tavolo.");
@@ -60,8 +63,8 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   });
 
   const loginEmail = trpc.auth.loginEmail.useMutation({
-    onSuccess: async () => {
-      handleSessionRemember();
+    onSuccess: async (data) => {
+      saveToken(data.token);
       await utils.auth.me.invalidate();
       await utils.leaderboard.current.invalidate();
       toast.success("Bentornato al tavolo!");
