@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { gameMatchResults, gameMatches, gameRoomMediaStates, gameRoomMessages, gameRoomPlayers, gameRoomWebrtcSignals, gameRooms, users } from "../drizzle/schema";
 import { autoPlay, closeInHand, createGame, matchRanking, nextDeal, playCard, resolveTrick } from "../client/src/game/engine";
 import type { GameState, PlayedCard } from "../client/src/game/types";
-import { getDb, getUserByOpenId } from "./db";
+import { getDb, getUserByOpenId, getUserById } from "./db";
 import { recordInMemoryMatch } from "./season";
 import { recordMatchToFirestore } from "./firestore";
 
@@ -167,7 +167,7 @@ async function displayedPlayers(rows: PlayerRow[]) {
   if (!db) {
     return Promise.all(
       rows.map(async (row) => {
-        const user = await getUserByOpenId(String(row.userId));
+        const user = await getUserById(row.userId);
         return {
           seat: row.seat,
           name: user?.name?.trim() || `Giocatore ${row.seat + 1}`,
