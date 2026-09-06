@@ -59,6 +59,25 @@ export const appRouter = router({
         ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
         return { success: true, user };
       }),
+    loginQuick: publicProcedure
+      .input(z.object({ name: z.string().min(1).max(50), email: z.string().email().optional() }))
+      .mutation(async ({ ctx, input }) => {
+        const name = input.name.trim();
+        const cleanName = name.replace(/[^a-zA-Z0-9àèéìòùÀÈÉÌÒÙ_\s]/g, "") || "Giocatore";
+        const openId = `user_${Buffer.from(cleanName).toString("hex").slice(0, 16)}_${Date.now().toString(36)}`;
+        await upsertUser({
+          openId,
+          name: cleanName,
+          email: input.email ?? null,
+          loginMethod: input.email ? "email" : "quick",
+          lastSignedIn: new Date(),
+        });
+        const token = await sdk.createSessionToken(openId, { name: cleanName });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, token, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+        const user = await getUserByOpenId(openId);
+        return { success: true, user };
+      }),
     loginGoogle: publicProcedure
       .input(z.object({ credential: z.string().min(1), nickname: z.string().min(1).max(50).optional() }))
       .mutation(async ({ ctx, input }) => {

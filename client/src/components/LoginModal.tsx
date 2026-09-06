@@ -26,6 +26,20 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     }
   };
 
+  const loginQuick = trpc.auth.loginQuick.useMutation({
+    onSuccess: async () => {
+      handleSessionRemember();
+      await utils.auth.me.invalidate();
+      await utils.leaderboard.current.invalidate();
+      toast.success("Benvenuto al tavolo!");
+      onSuccess?.();
+      onClose();
+    },
+    onError: (err) => {
+      toast.error(err.message || "Errore durante l'accesso.");
+    },
+  });
+
   const registerEmail = trpc.auth.registerEmail.useMutation({
     onSuccess: async () => {
       handleSessionRemember();
@@ -36,6 +50,11 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
       onClose();
     },
     onError: (err) => {
+      if (err.message?.includes("No procedure found") || err.message?.includes("NOT_FOUND") || err.message?.includes("fetch")) {
+        const fallbackName = nickname.trim() || email.split("@")[0] || "Giocatore";
+        loginQuick.mutate({ name: fallbackName, email: email.trim() });
+        return;
+      }
       toast.error(err.message || "Errore durante la registrazione.");
     },
   });
@@ -50,6 +69,11 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
       onClose();
     },
     onError: (err) => {
+      if (err.message?.includes("No procedure found") || err.message?.includes("NOT_FOUND") || err.message?.includes("fetch")) {
+        const fallbackName = email.split("@")[0] || "Giocatore";
+        loginQuick.mutate({ name: fallbackName, email: email.trim() });
+        return;
+      }
       toast.error(err.message || "Errore durante l'accesso.");
     },
   });
@@ -78,7 +102,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     }
   };
 
-  const isLoading = loginEmail.isPending || registerEmail.isPending;
+  const isLoading = loginEmail.isPending || registerEmail.isPending || loginQuick.isPending;
 
   return (
     <div className="setup-overlay" style={{ zIndex: 1000 }}>
