@@ -3,68 +3,22 @@
     {
       "site": "cotecchio-5f16c",
       "public": "dist/public",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "headers": [
+      "redirects": [
         {
           "source": "/**",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate, max-age=0"
-            },
-            {
-              "key": "Pragma",
-              "value": "no-cache"
-            },
-            {
-              "key": "Expires",
-              "value": "0"
-            }
-          ]
-        }
-      ],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
+          "destination": "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app",
+          "type": 301
         }
       ]
     },
     {
       "site": "cotecchio-game",
       "public": "dist/public",
-      "ignore": [
-        "firebase.json",
-        "**/.*",
-        "**/node_modules/**"
-      ],
-      "headers": [
+      "redirects": [
         {
           "source": "/**",
-          "headers": [
-            {
-              "key": "Cache-Control",
-              "value": "no-cache, no-store, must-revalidate, max-age=0"
-            },
-            {
-              "key": "Pragma",
-              "value": "no-cache"
-            },
-            {
-              "key": "Expires",
-              "value": "0"
-            }
-          ]
-        }
-      ],
-      "rewrites": [
-        {
-          "source": "**",
-          "destination": "/index.html"
+          "destination": "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app",
+          "type": 301
         }
       ]
     }

@@ -38,7 +38,7 @@ queryClient.getMutationCache().subscribe(event => {
 });
 
 const getApiUrl = () => {
-  return "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app/api/trpc";
+  return "/api/trpc";
 };
 
 const trpcClient = trpc.createClient({
@@ -69,8 +69,7 @@ const trpcClient = trpc.createClient({
       fetch(input, init) {
         return globalThis.fetch(input, {
           ...(init ?? {}),
-          credentials: "omit",
-          mode: "cors",
+          credentials: "include",
         });
       },
     }),
