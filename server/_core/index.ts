@@ -61,7 +61,20 @@ async function startServer() {
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   registerStorageProxy(app);
-  registerOAuthRoutes(app);
+  // Handle CORS OPTIONS preflight explicitly for tRPC routes
+  app.use("/api/trpc", (req, res, next) => {
+    if (req.method === "OPTIONS") {
+      const origin = req.headers.origin || "*";
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie, Accept, x-trpc-source, trpc-accept");
+      res.setHeader("Access-Control-Max-Age", "86400");
+      return res.status(204).end();
+    }
+    next();
+  });
+
   // tRPC API
   app.use(
     "/api/trpc",
