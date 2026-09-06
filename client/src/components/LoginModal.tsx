@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Lock, LogIn, Mail, User, UserPlus, X } from "lucide-react";
+import { AlertTriangle, Copy, Lock, LogIn, Mail, User, UserPlus, X, Check } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -15,6 +15,8 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(true);
+  const [diagnosticError, setDiagnosticError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const utils = trpc.useUtils();
 
@@ -29,6 +31,29 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     }
   };
 
+  const handleDiagnosticCapture = (actionName: string, err: any) => {
+    const errorDetails = [
+      `=== DIAGNOSTICA COTECCHIO AUTH ===`,
+      `Data/Ora: ${new Date().toISOString()}`,
+      `Azione: ${actionName}`,
+      `Host Corrente: ${typeof window !== "undefined" ? window.location.href : "Unknown"}`,
+      `User Agent: ${typeof navigator !== "undefined" ? navigator.userAgent : "Unknown"}`,
+      `Errore: ${err?.message || String(err)}`,
+      `Stack: ${err?.stack || "Non disponibile"}`,
+      `=================================`,
+    ].join("\n");
+
+    setDiagnosticError(errorDetails);
+  };
+
+  const copyDiagnosticLogs = () => {
+    if (!diagnosticError) return;
+    navigator.clipboard.writeText(diagnosticError);
+    setCopied(true);
+    toast.success("Dettagli errore copiati negli appunti!");
+    setTimeout(() => setCopied(false), 3000);
+  };
+
   const loginQuick = trpc.auth.loginQuick.useMutation({
     onSuccess: async (data) => {
       saveToken(data.token);
@@ -39,7 +64,8 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
       onClose();
     },
     onError: (err) => {
-      toast.error(err.message || "Errore durante l'accesso.");
+      handleDiagnosticCapture("loginQuick", err);
+      toast.error("Impossibile connettersi al server. Consulta la diagnostica sotto.");
     },
   });
 
@@ -53,6 +79,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
       onClose();
     },
     onError: (err) => {
+      handleDiagnosticCapture("registerEmail", err);
       if (err.message?.includes("No procedure found") || err.message?.includes("NOT_FOUND") || err.message?.includes("fetch")) {
         const fallbackName = nickname.trim() || email.split("@")[0] || "Giocatore";
         loginQuick.mutate({ name: fallbackName, email: email.trim() });
@@ -72,6 +99,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
       onClose();
     },
     onError: (err) => {
+      handleDiagnosticCapture("loginEmail", err);
       if (err.message?.includes("No procedure found") || err.message?.includes("NOT_FOUND") || err.message?.includes("fetch")) {
         const fallbackName = email.split("@")[0] || "Giocatore";
         loginQuick.mutate({ name: fallbackName, email: email.trim() });
@@ -85,6 +113,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
 
   const handleEmailSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setDiagnosticError(null);
     if (!email.trim() || !password.trim()) {
       toast.error("Compila tutti i campi richiesti.");
       return;
@@ -105,11 +134,16 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
     }
   };
 
+  const handleForceLocalSession = () => {
+    const fallbackName = nickname.trim() || email.split("@")[0] || "Giocatore";
+    loginQuick.mutate({ name: fallbackName, email: email.trim() });
+  };
+
   const isLoading = loginEmail.isPending || registerEmail.isPending || loginQuick.isPending;
 
   return (
     <div className="setup-overlay" style={{ zIndex: 1000 }}>
-      <section className="setup-card" style={{ maxWidth: 440, padding: 32, position: "relative" }}>
+      <section className="setup-card" style={{ maxWidth: 460, padding: 32, position: "relative", maxHeight: "90vh", overflowY: "auto" }}>
         <button
           onClick={onClose}
           style={{
@@ -141,7 +175,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
         <div style={{ display: "flex", gap: 8, marginBottom: 20, background: "#e8dac0", padding: 4, borderRadius: 8 }}>
           <button
             type="button"
-            onClick={() => setAuthMode("login")}
+            onClick={() => { setAuthMode("login"); setDiagnosticError(null); }}
             style={{
               flex: 1,
               padding: "9px 12px",
@@ -158,7 +192,7 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
           </button>
           <button
             type="button"
-            onClick={() => setAuthMode("register")}
+            onClick={() => { setAuthMode("register"); setDiagnosticError(null); }}
             style={{
               flex: 1,
               padding: "9px 12px",
@@ -273,6 +307,59 @@ export default function LoginModal({ open, onClose, onSuccess }: LoginModalProps
             )}
           </button>
         </form>
+
+        {/* Diagnostic Panel if Error Occurs */}
+        {diagnosticError && (
+          <div style={{ marginTop: 20, padding: 16, background: "#fff0f0", border: "1px solid #ff4d4d", borderRadius: 8, textAlign: "left" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#d91515", fontWeight: 700, fontSize: 14, marginBottom: 8 }}>
+              <AlertTriangle size={18} /> Diagnostica Errore Connessione
+            </div>
+            <p style={{ fontSize: 12, color: "#5a1a1a", margin: "0 0 10px" }}>
+              Si è verificato un errore di rete durante la comunicazione col server. Copia il report qui sotto per segnalarlo:
+            </p>
+            <pre style={{ fontSize: 11, background: "#ffffff", padding: 10, borderRadius: 6, border: "1px solid #ffcccc", overflowX: "auto", whiteSpace: "pre-wrap", color: "#333" }}>
+              {diagnosticError}
+            </pre>
+            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={copyDiagnosticLogs}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#d91515",
+                  color: "#ffffff",
+                  border: "none",
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                {copied ? <Check size={16} /> : <Copy size={16} />}
+                {copied ? "Copiato negli appunti!" : "Copia Dettagli Errore"}
+              </button>
+              <button
+                type="button"
+                onClick={handleForceLocalSession}
+                style={{
+                  background: "#194b3a",
+                  color: "#fff5de",
+                  border: "none",
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Entra comunque col Nickname
+              </button>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );
