@@ -34,7 +34,15 @@ async function startServer() {
 
   // 1. CORS Preflight & Headers MUST be the absolute first middleware
   app.use((req, res, next) => {
-    const origin = req.headers.origin || "*";
+    const rawOrigin = req.headers.origin || req.headers.referer;
+    let origin = "https://cotecchio-game.web.app";
+    if (rawOrigin) {
+      try {
+        origin = new URL(rawOrigin).origin;
+      } catch {
+        origin = rawOrigin;
+      }
+    }
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
@@ -42,19 +50,29 @@ async function startServer() {
     res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
 
     if (req.method === "OPTIONS") {
-      res.status(200).end();
+      res.status(204).end();
       return;
     }
     next();
   });
 
+  const getCorsOrigin = (req: express.Request) => {
+    const rawOrigin = req.headers.origin || req.headers.referer;
+    if (!rawOrigin) return "https://cotecchio-game.web.app";
+    try {
+      return new URL(rawOrigin).origin;
+    } catch {
+      return rawOrigin;
+    }
+  };
+
   app.options("*", (req, res) => {
-    const origin = req.headers.origin || "*";
+    const origin = getCorsOrigin(req);
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
     res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie, Accept, x-trpc-source, trpc-accept");
-    res.status(200).end();
+    res.status(204).end();
   });
 
   // Configure body parser with larger size limit for file uploads
@@ -64,7 +82,7 @@ async function startServer() {
   // Handle CORS OPTIONS preflight explicitly for tRPC routes
   app.use("/api/trpc", (req, res, next) => {
     if (req.method === "OPTIONS") {
-      const origin = req.headers.origin || "*";
+      const origin = getCorsOrigin(req);
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
       res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
