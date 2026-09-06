@@ -32,19 +32,29 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
 
-  // CORS Middleware for Mobile Native Apps (Capacitor / Android) & Web Clients
+  // 1. CORS Preflight & Headers MUST be the absolute first middleware
   app.use((req, res, next) => {
-    const origin = req.headers.origin || req.headers.referer?.replace(/\/$/, "") || "https://cotecchio-game--cotecchio-5f16c.europe-west4.hosted.app";
+    const origin = req.headers.origin || "*";
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Access-Control-Allow-Credentials", "true");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie, Accept, x-trpc-source");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie, Accept, x-trpc-source, trpc-accept");
     res.setHeader("Access-Control-Expose-Headers", "Set-Cookie");
+
     if (req.method === "OPTIONS") {
-      res.status(204).end();
+      res.status(200).end();
       return;
     }
     next();
+  });
+
+  app.options("*", (req, res) => {
+    const origin = req.headers.origin || "*";
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, HEAD");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Cookie, Accept, x-trpc-source, trpc-accept");
+    res.status(200).end();
   });
 
   // Configure body parser with larger size limit for file uploads
