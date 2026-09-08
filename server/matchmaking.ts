@@ -181,8 +181,8 @@ async function displayedPlayers(rows: PlayerRow[]) {
   }
 
   const records = await db.select({ id: users.id, name: users.name, avatarUrl: users.avatarUrl }).from(users).where(inArray(users.id, rows.map((row) => row.userId)));
-  const profile = new Map(records.map((user) => [user.id, { name: user.name?.trim() || "Giocatore", avatarUrl: user.avatarUrl }]));
-  return rows.map((row) => ({ seat: row.seat, name: profile.get(row.userId)?.name ?? `Giocatore ${row.seat + 1}`, avatarUrl: profile.get(row.userId)?.avatarUrl ?? null, ready: row.ready, userId: row.userId, pausedUntil: row.pausedUntil }));
+  const profile = new Map(records.map((user) => [user.id, { name: user.name?.trim() || undefined, avatarUrl: user.avatarUrl }]));
+  return rows.map((row) => ({ seat: row.seat, name: profile.get(row.userId)?.name || `Giocatore ${row.seat + 1}`, avatarUrl: profile.get(row.userId)?.avatarUrl ?? null, ready: row.ready, userId: row.userId, pausedUntil: row.pausedUntil }));
 }
 
 async function recordForfeit(room: RoomRow, player: PlayerRow) {
@@ -657,7 +657,7 @@ export async function snapshot(roomId: string, userId: number) {
     const roster = await displayedPlayers(updatedRows);
     const viewer = updatedRows.find((row) => row.userId === userId);
     const departureVotes = decodeDepartureVotes(room);
-    const departingUser = room.departureUserId ? await getUserByOpenId(String(room.departureUserId)) : null;
+    const departingUser = room.departureUserId ? await getUserById(room.departureUserId) : null;
     return {
       room: { id: room.id, playerCount: room.playerCount, activePlayerCount: updatedRows.length, scoreLimit: room.scoreLimit, status: room.status, visibility: room.visibility, inviteCode: room.inviteCode, version: room.version, turnDeadlineAt: room.turnDeadlineAt, readyDeadlineAt: room.readyDeadlineAt },
       players: roster,
@@ -891,7 +891,7 @@ export async function roomChat(roomId: string, userId: number) {
     const list = memMessages.filter((m) => m.roomId === roomId).slice(-80);
     return Promise.all(
       list.map(async (m) => {
-        const u = await getUserByOpenId(String(m.userId));
+        const u = await getUserById(m.userId);
         return {
           id: m.id,
           body: m.body,

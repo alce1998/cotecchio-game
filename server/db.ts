@@ -23,6 +23,16 @@ let nextUserId = 1;
 
 import { getUserByEmailFromFirestore, getUserFromFirestore, saveUserToFirestore } from "./firestore";
 
+export function getUserIdFromOpenId(openId: string): number {
+  let hash = 0;
+  for (let i = 0; i < openId.length; i++) {
+    const char = openId.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return Math.abs(hash) || 1;
+}
+
 export async function upsertUser(user: InsertUser & { passwordHash?: string | null }): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
@@ -45,7 +55,7 @@ export async function upsertUser(user: InsertUser & { passwordHash?: string | nu
     const now = new Date();
     if (!existing) {
       existing = {
-        id: nextUserId++,
+        id: getUserIdFromOpenId(user.openId),
         openId: user.openId,
         name: user.name ?? "Giocatore",
         email: user.email ?? null,

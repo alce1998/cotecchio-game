@@ -68,6 +68,8 @@ export async function saveUserToFirestore(user: {
   }
 }
 
+import { getUserIdFromOpenId } from "./db";
+
 export async function getUserByEmailFromFirestore(email: string) {
   const fdb = getFirestoreDb();
   if (!fdb) return null;
@@ -77,7 +79,7 @@ export async function getUserByEmailFromFirestore(email: string) {
     const doc = snap.docs[0];
     const data = doc.data();
     return {
-      id: Math.abs(hashCode(data.openId)),
+      id: getUserIdFromOpenId(data.openId),
       openId: data.openId,
       name: data.name || "Giocatore",
       email: data.email || null,
@@ -102,7 +104,7 @@ export async function getUserFromFirestore(openId: string) {
     if (!snap.exists) return null;
     const data = snap.data();
     return {
-      id: Math.abs(hashCode(openId)),
+      id: getUserIdFromOpenId(data?.openId || openId),
       openId: data?.openId || openId,
       name: data?.name || "Giocatore",
       email: data?.email || null,
