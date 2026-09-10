@@ -1,0 +1,3 @@
+version: v1
+runConfig:
+  runCommand: node dist/index.js
