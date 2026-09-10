@@ -93,11 +93,22 @@ type MemSignal = {
   createdAt: Date;
 };
 
+type MemPauseProposal = {
+  requestedBy: number;
+  requesterName: string;
+  minutes: number;
+  votes: Map<number, "accept" | "reject">;
+  createdAt: Date;
+};
+
 const memRooms = new Map<string, MemRoom>();
 const memPlayers = new Map<number, MemPlayer>();
 const memMessages: MemMessage[] = [];
 const memMedia = new Map<string, MemMedia>();
 const memSignals: MemSignal[] = [];
+const memPauseProposals = new Map<string, MemPauseProposal>();
+const memPauseReadyUsers = new Map<string, Set<number>>();
+const memSpectators = new Map<string, Set<number>>();
 
 let memPlayerSeq = 1;
 let memMessageSeq = 1;
@@ -457,6 +468,40 @@ async function membership(roomId: string, userId: number) {
   return { rows, player };
 }
 
+async function addPlayerToInProgressGame(roomId: string, userId: number) {
+  const room = await roomById(roomId);
+  if (!room.gameState) return;
+  const game = decodeState(room);
+  const user = await getUserById(userId);
+  const userName = user?.name?.trim() || `Giocatore ${game.players.length + 1}`;
+  const maxScore = Math.max(...game.players.map((p) => p.score), 0);
+
+  const newSeat = game.players.length;
+  game.players.push({
+    id: newSeat,
+    name: userName,
+    score: maxScore,
+    hand: [],
+    roundPointsRaw: 0,
+    tricks: 0,
+  });
+  game.playerCount = game.players.length;
+  if (Array.isArray(game.roundAwards)) game.roundAwards.push(0);
+  if (Array.isArray(game.roundAbbuono)) game.roundAbbuono.push(0);
+
+  const db = await getDb();
+  if (!db) {
+    const memR = memRooms.get(roomId);
+    if (memR) {
+      memR.playerCount = game.players.length;
+      memR.gameState = JSON.stringify(game);
+      memR.version += 1;
+    }
+  } else {
+    await db.update(gameRooms).set({ playerCount: game.players.length, gameState: JSON.stringify(game), version: room.version + 1 }).where(eq(gameRooms.id, roomId));
+  }
+}
+
 export async function joinMatchmaking(userId: number, _requestedScoreLimit: number) {
   const scoreLimit = ONLINE_SCORE_LIMIT;
   const db = await getDb();
@@ -482,6 +527,35 @@ export async function joinMatchmaking(userId: number, _requestedScoreLimit: numb
       memPlayers.set(newPlayer.id, newPlayer);
       return snapshot(candidate.id, userId);
     }
+
+    const playingCandidates = Array.from(memRooms.values()).filter(
+      (r) => r.status === "playing" && r.visibility === "public" && r.scoreLimit === scoreLimit
+    );
+    const withCounts = await Promise.all(
+      playingCandidates.map(async (room) => ({ room, rows: await activePlayers(room.id) }))
+    );
+    const validPlaying = withCounts.filter((item) => item.rows.length < 8);
+    validPlaying.sort((a, b) => a.rows.length - b.rows.length);
+
+    if (validPlaying.length > 0) {
+      const best = validPlaying[0];
+      if (best.rows.some((row) => row.userId === userId)) return snapshot(best.room.id, userId);
+      const newPlayer: MemPlayer = {
+        id: memPlayerSeq++,
+        roomId: best.room.id,
+        userId,
+        seat: best.rows.length,
+        ready: true,
+        pausedUntil: null,
+        pauseUsed: false,
+        leftAt: null,
+        lastSeenAt: new Date(),
+      };
+      memPlayers.set(newPlayer.id, newPlayer);
+      await addPlayerToInProgressGame(best.room.id, userId);
+      return snapshot(best.room.id, userId);
+    }
+
     const id = nanoid(12);
     const newRoom: MemRoom = {
       id,
@@ -524,6 +598,22 @@ export async function joinMatchmaking(userId: number, _requestedScoreLimit: numb
     await db.insert(gameRoomPlayers).values({ roomId: candidate.id, userId, seat: rows.length });
     return snapshot(candidate.id, userId);
   }
+
+  const playingCandidates = await db.select().from(gameRooms).where(and(eq(gameRooms.status, "playing"), eq(gameRooms.visibility, "public"), eq(gameRooms.scoreLimit, scoreLimit))).orderBy(asc(gameRooms.createdAt));
+  const withCounts = await Promise.all(
+    playingCandidates.map(async (room) => ({ room, rows: await activePlayers(room.id) }))
+  );
+  const validPlaying = withCounts.filter((item) => item.rows.length < 8);
+  validPlaying.sort((a, b) => a.rows.length - b.rows.length);
+
+  if (validPlaying.length > 0) {
+    const best = validPlaying[0];
+    if (best.rows.some((row) => row.userId === userId)) return snapshot(best.room.id, userId);
+    await db.insert(gameRoomPlayers).values({ roomId: best.room.id, userId, seat: best.rows.length, ready: true });
+    await addPlayerToInProgressGame(best.room.id, userId);
+    return snapshot(best.room.id, userId);
+  }
+
   const id = nanoid(12);
   await db.insert(gameRooms).values({ id, ownerUserId: userId, visibility: "public", playerCount: 3, scoreLimit, readyDeadlineAt: new Date(Date.now() + READY_WAIT_MS) });
   await db.insert(gameRoomPlayers).values({ roomId: id, userId, seat: 0 });
@@ -540,7 +630,7 @@ export function isPublicMatchmakingRoom(visibility: "public" | "private", status
 
 export function privateJoinValidation(room: { visibility: "public" | "private"; status: string; activePlayers: number } | null, code: string) {
   if (normalizedInviteCode(code).length < 6) return "invalid-code" as const;
-  if (!room || room.visibility !== "private" || room.status !== "waiting") return "unavailable" as const;
+  if (!room || room.visibility !== "private" || (room.status !== "waiting" && room.status !== "playing")) return "unavailable" as const;
   return "accepted" as const;
 }
 
@@ -603,85 +693,132 @@ export async function createPrivateRoom(userId: number, _requestedScoreLimit: nu
   return snapshot(id, userId);
 }
 
-export async function joinPrivateByCode(userId: number, rawCode: string) {
+export async function joinPrivateByCode(userId: number, rawCode: string, mode: "player" | "spectate" = "player") {
   const code = normalizedInviteCode(rawCode);
-  if (privateJoinValidation(null, code) === "invalid-code") throw new Error("Inserisci un codice sala valido.");
   const db = await getDb();
 
+  let room: RoomRow | undefined;
   if (!db) {
-    const room = Array.from(memRooms.values()).find(
-      (r) => r.inviteCode === code && r.visibility === "private" && r.status === "waiting"
+    const r = Array.from(memRooms.values()).find(
+      (entry) => entry.inviteCode === code && entry.visibility === "private" && (entry.status === "waiting" || entry.status === "playing")
     );
-    if (!room) throw new Error("Codice non valido o sala non più disponibile.");
-    const rows = await activePlayers(room.id);
-    const validation = privateJoinValidation({ visibility: room.visibility, status: room.status, activePlayers: rows.length }, code);
-    if (validation !== "accepted") throw new Error("Codice non valido o sala non più disponibile.");
-    if (rows.some((row) => row.userId === userId)) return snapshot(room.id, userId);
+    if (r) room = r as unknown as RoomRow;
+  } else {
+    const [r] = await db.select().from(gameRooms).where(and(eq(gameRooms.inviteCode, code), eq(gameRooms.visibility, "private"), inArray(gameRooms.status, ["waiting", "playing"]))).limit(1);
+    room = r;
+  }
+
+  if (!room) throw new Error("Codice non valido o sala non più disponibile.");
+
+  if (mode === "spectate") {
+    let specSet = memSpectators.get(room.id);
+    if (!specSet) {
+      specSet = new Set();
+      memSpectators.set(room.id, specSet);
+    }
+    specSet.add(userId);
+    return snapshot(room.id, userId);
+  }
+
+  const rows = await activePlayers(room.id);
+  const validation = privateJoinValidation({ visibility: room.visibility, status: room.status, activePlayers: rows.length }, code);
+  if (validation !== "accepted") throw new Error("Codice non valido o sala non più disponibile.");
+  if (rows.some((row) => row.userId === userId)) return snapshot(room.id, userId);
+
+  if (!db) {
     const newPlayer: MemPlayer = {
       id: memPlayerSeq++,
       roomId: room.id,
       userId,
       seat: rows.length,
-      ready: false,
+      ready: room.status === "playing",
       pausedUntil: null,
       pauseUsed: false,
       leftAt: null,
       lastSeenAt: new Date(),
     };
     memPlayers.set(newPlayer.id, newPlayer);
-    return snapshot(room.id, userId);
+  } else {
+    await db.insert(gameRoomPlayers).values({ roomId: room.id, userId, seat: rows.length, ready: room.status === "playing" });
   }
 
-  const [room] = await db.select().from(gameRooms).where(and(eq(gameRooms.inviteCode, code), eq(gameRooms.visibility, "private"), eq(gameRooms.status, "waiting"))).limit(1);
-  if (!room) throw new Error("Codice non valido o sala non più disponibile.");
-  const rows = await activePlayers(room.id);
-  const validation = privateJoinValidation({ visibility: room.visibility, status: room.status, activePlayers: rows.length }, code);
-  if (validation !== "accepted") throw new Error("Codice non valido o sala non più disponibile.");
-  if (rows.some((row) => row.userId === userId)) return snapshot(room.id, userId);
-  await db.insert(gameRoomPlayers).values({ roomId: room.id, userId, seat: rows.length });
+  if (room.status === "playing") {
+    await addPlayerToInProgressGame(room.id, userId);
+  }
+
   return snapshot(room.id, userId);
 }
 
 export async function snapshot(roomId: string, userId: number) {
   const db = await getDb();
+  const isSpectator = memSpectators.get(roomId)?.has(userId) ?? false;
+
+  let room: RoomRow;
+  let updatedRows: PlayerRow[];
+  let roster: Awaited<ReturnType<typeof displayedPlayers>>;
+  let viewer: PlayerRow | undefined;
+  let departingUser: any = null;
+  let departureVotes: DepartureVotes = {};
+
   if (!db) {
-    const pList = Array.from(memPlayers.values()).filter((p) => p.roomId === roomId && p.userId === userId && !p.leftAt);
-    pList.forEach((p) => { p.lastSeenAt = new Date(); });
-    let room = await reconcilePresence(await roomById(roomId));
-    const { rows, player } = await membership(roomId, userId);
-    const memP = memPlayers.get(player.id);
-    if (memP) memP.lastSeenAt = new Date();
-    room = await startIfReady(room, rows);
+    if (!isSpectator) {
+      const pList = Array.from(memPlayers.values()).filter((p) => p.roomId === roomId && p.userId === userId && !p.leftAt);
+      pList.forEach((p) => { p.lastSeenAt = new Date(); });
+    }
+    room = await reconcilePresence(await roomById(roomId));
+    if (!isSpectator) {
+      const { player } = await membership(roomId, userId);
+      const memP = memPlayers.get(player.id);
+      if (memP) memP.lastSeenAt = new Date();
+    }
+    const currentRows = await activePlayers(roomId);
+    room = await startIfReady(room, currentRows);
     room = await advanceExpiredTurn(room);
-    const updatedRows = await activePlayers(roomId);
-    const roster = await displayedPlayers(updatedRows);
-    const viewer = updatedRows.find((row) => row.userId === userId);
-    const departureVotes = decodeDepartureVotes(room);
-    const departingUser = room.departureUserId ? await getUserById(room.departureUserId) : null;
-    return {
-      room: { id: room.id, playerCount: room.playerCount, activePlayerCount: updatedRows.length, scoreLimit: room.scoreLimit, status: room.status, visibility: room.visibility, inviteCode: room.inviteCode, version: room.version, turnDeadlineAt: room.turnDeadlineAt, readyDeadlineAt: room.readyDeadlineAt },
-      players: roster,
-      game: room.gameState && viewer ? withDisplayOrder(decodeState(room), viewer.seat, new Map(roster.map((entry) => [entry.seat, entry.name]))) : null,
-      departure: room.departureUserId ? { userId: room.departureUserId, playerName: departingUser?.name?.trim() || "Un giocatore", votes: departureVotes, canContinue: canContinueAfterDeparture(updatedRows.length) } : null,
-    };
+    updatedRows = await activePlayers(roomId);
+    roster = await displayedPlayers(updatedRows);
+    viewer = updatedRows.find((row) => row.userId === userId);
+    departureVotes = decodeDepartureVotes(room);
+    departingUser = room.departureUserId ? await getUserById(room.departureUserId) : null;
+  } else {
+    if (!isSpectator) {
+      await db.update(gameRoomPlayers).set({ lastSeenAt: new Date() }).where(and(eq(gameRoomPlayers.roomId, roomId), eq(gameRoomPlayers.userId, userId), isNull(gameRoomPlayers.leftAt)));
+    }
+    room = await reconcilePresence(await roomById(roomId));
+    if (!isSpectator) {
+      const { player } = await membership(roomId, userId);
+      await db.update(gameRoomPlayers).set({ lastSeenAt: new Date() }).where(eq(gameRoomPlayers.id, player.id));
+    }
+    const currentRows = await activePlayers(roomId);
+    room = await startIfReady(room, currentRows);
+    room = await advanceExpiredTurn(room);
+    updatedRows = await activePlayers(roomId);
+    roster = await displayedPlayers(updatedRows);
+    viewer = updatedRows.find((row) => row.userId === userId);
+    departureVotes = decodeDepartureVotes(room);
+    departingUser = room.departureUserId ? (await db.select({ name: users.name }).from(users).where(eq(users.id, room.departureUserId)).limit(1))[0] : null;
   }
 
-  await db.update(gameRoomPlayers).set({ lastSeenAt: new Date() }).where(and(eq(gameRoomPlayers.roomId, roomId), eq(gameRoomPlayers.userId, userId), isNull(gameRoomPlayers.leftAt)));
-  let room = await reconcilePresence(await roomById(roomId));
-  const { rows, player } = await membership(roomId, userId);
-  await db.update(gameRoomPlayers).set({ lastSeenAt: new Date() }).where(eq(gameRoomPlayers.id, player.id));
-  room = await startIfReady(room, rows);
-  room = await advanceExpiredTurn(room);
-  const updatedRows = await activePlayers(roomId);
-  const roster = await displayedPlayers(updatedRows);
-  const viewer = updatedRows.find((row) => row.userId === userId);
-  const departureVotes = decodeDepartureVotes(room);
-  const departingUser = room.departureUserId ? (await db.select({ name: users.name }).from(users).where(eq(users.id, room.departureUserId)).limit(1))[0] : null;
+  const prop = memPauseProposals.get(roomId);
+  const pauseProposal = prop ? {
+    requestedBy: prop.requestedBy,
+    requesterName: prop.requesterName,
+    minutes: prop.minutes,
+    acceptedUserIds: Array.from(prop.votes.entries()).filter(([_, v]) => v === "accept").map(([uid]) => uid),
+    totalRequired: updatedRows.length,
+    hasVoted: prop.votes.has(userId),
+  } : null;
+
+  const pauseReadyUserIds = Array.from(memPauseReadyUsers.get(roomId) ?? []);
+  const viewerSeat = viewer ? viewer.seat : 0;
+
   return {
     room: { id: room.id, playerCount: room.playerCount, activePlayerCount: updatedRows.length, scoreLimit: room.scoreLimit, status: room.status, visibility: room.visibility, inviteCode: room.inviteCode, version: room.version, turnDeadlineAt: room.turnDeadlineAt, readyDeadlineAt: room.readyDeadlineAt },
     players: roster,
-    game: room.gameState && viewer ? withDisplayOrder(decodeState(room), viewer.seat, new Map(roster.map((entry) => [entry.seat, entry.name]))) : null,
+    game: room.gameState ? withDisplayOrder(decodeState(room), viewerSeat, new Map(roster.map((entry) => [entry.seat, entry.name]))) : null,
     departure: room.departureUserId ? { userId: room.departureUserId, playerName: departingUser?.name?.trim() || "Un giocatore", votes: departureVotes, canContinue: canContinueAfterDeparture(updatedRows.length) } : null,
+    pauseProposal,
+    pauseReadyUserIds,
+    isSpectator,
   };
 }
 
@@ -786,6 +923,114 @@ export async function resumeOnlinePause(roomId: string, userId: number) {
     await db.update(gameRoomPlayers).set({ pausedUntil: null }).where(eq(gameRoomPlayers.id, player.id));
     await db.update(gameRooms).set({ turnDeadlineAt: new Date(Date.now() + TURN_MS), version: room.version + 1 }).where(eq(gameRooms.id, roomId));
   }
+  return snapshot(roomId, userId);
+}
+
+async function activateRoomPause(roomId: string, minutes: number) {
+  const pausedUntil = new Date(Date.now() + minutes * 60_000);
+  const db = await getDb();
+  if (!db) {
+    const memR = memRooms.get(roomId);
+    if (memR) {
+      memR.turnDeadlineAt = pausedUntil;
+      memR.version += 1;
+    }
+    const rows = await activePlayers(roomId);
+    rows.forEach((p) => {
+      const memP = memPlayers.get(p.id);
+      if (memP) memP.pausedUntil = pausedUntil;
+    });
+  } else {
+    await db.update(gameRooms).set({ turnDeadlineAt: pausedUntil }).where(eq(gameRooms.id, roomId));
+    await db.update(gameRoomPlayers).set({ pausedUntil }).where(and(eq(gameRoomPlayers.roomId, roomId), isNull(gameRoomPlayers.leftAt)));
+  }
+  memPauseReadyUsers.set(roomId, new Set());
+}
+
+export async function requestPauseProposal(roomId: string, userId: number, minutes: number) {
+  const durationMinutes = Math.min(Math.max(1, Math.round(minutes)), 10);
+  const room = await roomById(roomId);
+  if (room.status !== "playing") throw new Error("La pausa può essere richiesta solo durante la partita.");
+  if (room.departureUserId) throw new Error("Un abbandono è già in attesa di decisione.");
+  if (memPauseProposals.has(roomId)) throw new Error("Una richiesta di pausa è già in corso al tavolo.");
+
+  const { rows, player } = await membership(roomId, userId);
+  const user = await getUserById(userId);
+  const requesterName = user?.name?.trim() || `Giocatore ${player.seat + 1}`;
+
+  const votes = new Map<number, "accept" | "reject">();
+  votes.set(userId, "accept");
+
+  const proposal: MemPauseProposal = {
+    requestedBy: userId,
+    requesterName,
+    minutes: durationMinutes,
+    votes,
+    createdAt: new Date(),
+  };
+
+  memPauseProposals.set(roomId, proposal);
+
+  if (rows.length <= 1) {
+    await activateRoomPause(roomId, durationMinutes);
+    memPauseProposals.delete(roomId);
+  }
+
+  return snapshot(roomId, userId);
+}
+
+export async function votePauseProposal(roomId: string, userId: number, vote: "accept" | "reject") {
+  const room = await roomById(roomId);
+  const proposal = memPauseProposals.get(roomId);
+  if (!proposal) throw new Error("Nessuna richiesta di pausa attiva da votare.");
+
+  const { rows } = await membership(roomId, userId);
+
+  if (vote === "reject") {
+    memPauseProposals.delete(roomId);
+    return snapshot(roomId, userId);
+  }
+
+  proposal.votes.set(userId, "accept");
+
+  const acceptedCount = rows.filter((p) => proposal.votes.get(p.userId) === "accept").length;
+  if (acceptedCount >= rows.length) {
+    await activateRoomPause(roomId, proposal.minutes);
+    memPauseProposals.delete(roomId);
+  }
+
+  return snapshot(roomId, userId);
+}
+
+export async function setPauseReady(roomId: string, userId: number) {
+  const room = await roomById(roomId);
+  const { rows } = await membership(roomId, userId);
+  let readySet = memPauseReadyUsers.get(roomId);
+  if (!readySet) {
+    readySet = new Set();
+    memPauseReadyUsers.set(roomId, readySet);
+  }
+  readySet.add(userId);
+
+  if (rows.every((p) => readySet!.has(p.userId))) {
+    const db = await getDb();
+    if (!db) {
+      const memR = memRooms.get(roomId);
+      if (memR) {
+        memR.turnDeadlineAt = new Date(Date.now() + TURN_MS);
+        memR.version += 1;
+      }
+      rows.forEach((p) => {
+        const memP = memPlayers.get(p.id);
+        if (memP) memP.pausedUntil = null;
+      });
+    } else {
+      await db.update(gameRooms).set({ turnDeadlineAt: new Date(Date.now() + TURN_MS) }).where(eq(gameRooms.id, roomId));
+      await db.update(gameRoomPlayers).set({ pausedUntil: null }).where(and(eq(gameRoomPlayers.roomId, roomId), isNull(gameRoomPlayers.leftAt)));
+    }
+    memPauseReadyUsers.delete(roomId);
+  }
+
   return snapshot(roomId, userId);
 }
 

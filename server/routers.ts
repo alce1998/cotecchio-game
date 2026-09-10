@@ -1,12 +1,12 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
 import { z } from "zod";
-import { closeOnlineInHand, createPrivateRoom, joinMatchmaking, joinPrivateByCode, leaveOnlineRoom, nextOnlineDeal, playOnlineCard, postRoomChat, resumeOnlinePause, roomChat, roomMediaStates, sendWebrtcSignal, setProfileAvatar, setReady, setRoomMediaState, snapshot, useOnlinePause, voteAfterDeparture, webRtcSignals } from "./matchmaking";
+import { closeOnlineInHand, createPrivateRoom, joinMatchmaking, joinPrivateByCode, leaveOnlineRoom, nextOnlineDeal, playOnlineCard, postRoomChat, requestPauseProposal, resumeOnlinePause, roomChat, roomMediaStates, sendWebrtcSignal, setPauseReady, setProfileAvatar, setReady, setRoomMediaState, snapshot, useOnlinePause, voteAfterDeparture, votePauseProposal, webRtcSignals } from "./matchmaking";
 import { getSeasonLeaderboard } from "./season";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/sdk";
-import { getUserByEmail, getUserByOpenId, upsertUser } from "./db";
+import { getUserByEmail, getUserByOpenId, updateUserNickname, upsertUser } from "./db";
 
 import crypto from "crypto";
 
@@ -117,17 +117,21 @@ export const appRouter = router({
   }),
   profile: router({
     setAvatar: protectedProcedure.input(z.object({ avatarUrl: z.string().max(2048) })).mutation(({ ctx, input }) => setProfileAvatar(ctx.user.id, input.avatarUrl)),
+    setNickname: protectedProcedure.input(z.object({ nickname: z.string().min(1).max(50) })).mutation(({ ctx, input }) => updateUserNickname(ctx.user.id, input.nickname)),
   }),
   match: router({
     join: protectedProcedure.input(z.object({ scoreLimit: z.number().int().min(50).max(150) })).mutation(({ ctx, input }) => joinMatchmaking(ctx.user.id, input.scoreLimit)),
     createPrivate: protectedProcedure.input(z.object({ scoreLimit: z.number().int().min(50).max(150) })).mutation(({ ctx, input }) => createPrivateRoom(ctx.user.id, input.scoreLimit)),
-    joinPrivate: protectedProcedure.input(z.object({ inviteCode: z.string().min(1).max(24) })).mutation(({ ctx, input }) => joinPrivateByCode(ctx.user.id, input.inviteCode)),
+    joinPrivate: protectedProcedure.input(z.object({ inviteCode: z.string().min(1).max(24), mode: z.enum(["player", "spectate"]).optional() })).mutation(({ ctx, input }) => joinPrivateByCode(ctx.user.id, input.inviteCode, input.mode)),
     snapshot: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).query(({ ctx, input }) => snapshot(input.roomId, ctx.user.id)),
     ready: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => setReady(input.roomId, ctx.user.id)),
     playCard: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32), cardId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => playOnlineCard(input.roomId, ctx.user.id, input.cardId)),
     closeInHand: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => closeOnlineInHand(input.roomId, ctx.user.id)),
     pause: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => useOnlinePause(input.roomId, ctx.user.id)),
     resume: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => resumeOnlinePause(input.roomId, ctx.user.id)),
+    requestPauseProposal: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32), minutes: z.number().int().min(1).max(10) })).mutation(({ ctx, input }) => requestPauseProposal(input.roomId, ctx.user.id, input.minutes)),
+    votePauseProposal: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32), vote: z.enum(["accept", "reject"]) })).mutation(({ ctx, input }) => votePauseProposal(input.roomId, ctx.user.id, input.vote)),
+    setPauseReady: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => setPauseReady(input.roomId, ctx.user.id)),
     leave: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => leaveOnlineRoom(input.roomId, ctx.user.id)),
     voteDeparture: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32), vote: z.enum(["continue", "end"]) })).mutation(({ ctx, input }) => voteAfterDeparture(input.roomId, ctx.user.id, input.vote)),
     nextDeal: protectedProcedure.input(z.object({ roomId: z.string().min(1).max(32) })).mutation(({ ctx, input }) => nextOnlineDeal(input.roomId, ctx.user.id)),

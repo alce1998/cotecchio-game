@@ -175,4 +175,27 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateUserNickname(userId: number, rawName: string) {
+  const nickname = rawName.trim();
+  if (!nickname) throw new Error("Il nickname non può essere vuoto.");
+  if (nickname.length > 50) throw new Error("Il nickname può contenere al massimo 50 caratteri.");
+
+  const db = await getDb();
+  if (!db) {
+    const memUser = Array.from(inMemoryUsers.values()).find((u) => u.id === userId);
+    if (memUser) {
+      memUser.name = nickname;
+      saveUserToFirestore({ openId: memUser.openId, name: nickname }).catch(() => undefined);
+    }
+    return { success: true, name: nickname };
+  }
+
+  await db.update(users).set({ name: nickname }).where(eq(users.id, userId));
+  const [user] = await db.select({ openId: users.openId }).from(users).where(eq(users.id, userId)).limit(1);
+  if (user?.openId) {
+    saveUserToFirestore({ openId: user.openId, name: nickname }).catch(() => undefined);
+  }
+  return { success: true, name: nickname };
+}
+
 // TODO: add feature queries here as your schema grows.
