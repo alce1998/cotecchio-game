@@ -1,7 +1,10 @@
 import { defineConfig } from "vitest/config";
 import path from "path";
+import { fileURLToPath } from "node:url";
 
-const templateRoot = path.resolve(import.meta.dirname);
+const templateRoot = typeof import.meta.dirname !== "undefined"
+  ? import.meta.dirname
+  : path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   root: templateRoot,

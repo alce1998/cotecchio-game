@@ -3,8 +3,13 @@ import fs from "fs";
 import { type Server } from "http";
 import { nanoid } from "nanoid";
 import path from "path";
+import { fileURLToPath } from "node:url";
 import { createServer as createViteServer } from "vite";
 import viteConfig from "../../vite.config";
+
+const __dirname_safe = typeof import.meta.dirname !== "undefined"
+  ? import.meta.dirname
+  : path.dirname(fileURLToPath(import.meta.url));
 
 export async function setupVite(app: Express, server: Server) {
   const serverOptions = {
@@ -26,7 +31,7 @@ export async function setupVite(app: Express, server: Server) {
 
     try {
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        __dirname_safe,
         "../..",
         "client",
         "index.html"
@@ -48,8 +53,8 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath1 = path.resolve(import.meta.dirname, "public");
-  const distPath2 = path.resolve(import.meta.dirname, "../..", "dist", "public");
+  const distPath1 = path.resolve(__dirname_safe, "public");
+  const distPath2 = path.resolve(__dirname_safe, "../..", "dist", "public");
   const distPath = fs.existsSync(distPath1) ? distPath1 : distPath2;
 
   if (!fs.existsSync(distPath)) {
