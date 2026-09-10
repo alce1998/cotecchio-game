@@ -9,7 +9,11 @@ import { defineConfig, type Plugin, type ViteDevServer } from "vite";
 // Writes browser logs directly to files, trimmed when exceeding size limit
 // =============================================================================
 
-const PROJECT_ROOT = import.meta.dirname;
+import { fileURLToPath } from "node:url";
+
+const PROJECT_ROOT = typeof import.meta.dirname !== "undefined"
+  ? import.meta.dirname
+  : path.dirname(fileURLToPath(import.meta.url));
 const LOG_DIR = path.join(PROJECT_ROOT, ".manus-logs");
 const MAX_LOG_SIZE_BYTES = 1 * 1024 * 1024; // 1MB per log file
 const TRIM_TARGET_BYTES = Math.floor(MAX_LOG_SIZE_BYTES * 0.6); // Trim to 60% to avoid constant re-trimming
