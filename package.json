@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js && node -e \"const fs=require('fs'); fs.mkdirSync('.apphosting',{recursive:true}); fs.writeFileSync('.apphosting/bundle.yaml','version: v1\\nrunConfig:\\n  runCommand: node dist/index.js\\n');\"",
+    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/index.js && node scripts/generate-bundle.js",
     "start": "node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",
