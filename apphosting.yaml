@@ -6,10 +6,6 @@ runConfig:
   cpu: 1
   memoryMiB: 512
 
-scripts:
-  buildCommand: npm run build
-  runCommand: node dist/index.js
-
 env:
   - variable: NODE_ENV
     value: production
